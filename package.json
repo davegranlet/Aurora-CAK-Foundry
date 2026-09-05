@@ -1,0 +1,20 @@
+{
+  "name": "aurora-cak-foundry",
+  "version": "1.7.6",
+  "description": "Standalone WWE 2K26 CAK archive extractor, rebuilder, baker, and validator.",
+  "main": "electron/standalone-cak-main.js",
+  "author": "VikingStudios",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "build:helper": "node scripts/build-cak-helper.js",
+    "verify:cak": "node scripts/verify-cak-extraction.js",
+    "verify:repack": "node scripts/verify-repackager.js",
+    "verify:raw": "node scripts/verify-raw-hash-roundtrip.js",
+    "verify:catalog": "node scripts/verify-cak-catalog-coverage.js"
+  },
+  "devDependencies": {
+    "electron": "43.2.0"
+  }
+}
+
