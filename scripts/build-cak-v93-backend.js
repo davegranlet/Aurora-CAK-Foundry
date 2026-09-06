@@ -25,5 +25,6 @@ for (const entry of fs.readdirSync(publish, { withFileTypes: true })) {
   if (entry.isFile() && !/^oo2core_9_win64\.dll$/i.test(entry.name)) fs.copyFileSync(path.join(publish, entry.name), path.join(destination, entry.name));
 }
 fs.copyFileSync(path.join(root, 'third_party', 'Nenkai-Bakery', 'LICENSE.txt'), path.join(destination, 'NENKAI-BAKERY-MIT-LICENSE.txt'));
+fs.copyFileSync(path.join(root, 'third_party', 'Nenkai-Bakery', 'LICENSES', 'Crunch2', 'license.txt'), path.join(destination, 'CRUNCH2-LICENSE.txt'));
 fs.copyFileSync(path.join(root, 'third_party', 'Nenkai-Bakery', 'AURORA-INTEGRATION-NOTICE.md'), path.join(destination, 'AURORA-INTEGRATION-NOTICE.md'));
 console.log(`Built ${path.relative(root, destination)} without Oodle or game files.`);
