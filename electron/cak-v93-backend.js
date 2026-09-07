@@ -58,7 +58,7 @@ function extractFile(archivePath, relativePath, outputRoot, toolPath, oodlePath)
 }
 
 function buildCak(sourceRoot, outputPath, toolPath, oodlePath) {
-  return runBackend(toolPath, ['pack', '-i', sourceRoot, '-v', '9.3', '-o', outputPath], oodlePath);
+  return runBackend(toolPath, ['pack', '-i', sourceRoot, '-v', '9.3', '-o', outputPath, '--encrypt-header'], oodlePath);
 }
 
 function walk(root, current = root, output = []) {

@@ -98,5 +98,7 @@
 - Observed: a 2,004-file `bakedfile80` rebuild reopened in the development backend and reproduced every payload SHA-256, but WWE 2K25 v1.23 returned `false` when the exact-build loader attempted to mount it.
 - Impact: WWE 2K25 extraction remains Ready, but WWE 2K25 rebuilding is not game-compatible and remains Experimental.
 - Root cause: stock v1.23 FDIR 9.3 archives protect or obfuscate catalog bytes after the eight-byte prefix. The current writer emits the catalog in plain form, so its own reader can reopen it but the game rejects it.
-- Status: open. Implement the stock-compatible FDIR 9.3 sealing step and add a structural regression test before another in-game mount attempt.
+- Fix: implemented the inverse >=8.7 catalog transform, filename-derived v9.3 keying, encrypted-header flag, per-string scrambling, plaintext section CRCs, and declared-length-only section protection. The first fixture exposed and corrected an alignment-padding checksum error.
+- Offline verification: the automated protected-writer fixture passes, and the full 2,004-file `bakedfile80` rebuild reopens and reproduces every source payload hash. The protected test CAK is 2,214,802,300 bytes with SHA-256 `DA50A25904803B002864B69BCF0033A76974CEA5F91CE95E4E344441C63B0818`.
+- Status: fix implemented and verified offline; live mount acceptance remains pending, so WWE 2K25 rebuilding is still Experimental.
 - Verification required: all payload hashes must still match, the output catalog must have protected stock-compatible structure, the game mount routine must return `true`, and a replacement must be visible in-game.

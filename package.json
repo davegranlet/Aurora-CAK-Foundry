@@ -14,7 +14,8 @@
     "verify:repack": "node scripts/verify-repackager.js",
     "verify:raw": "node scripts/verify-raw-hash-roundtrip.js",
     "verify:catalog": "node scripts/verify-cak-catalog-coverage.js",
-    "verify:v93": "node scripts/verify-cak-v93.js"
+    "verify:v93": "node scripts/verify-cak-v93.js",
+    "verify:v93-writer": "node scripts/verify-cak-v93-protected-writer.js"
   },
   "devDependencies": {
     "electron": "43.2.0"

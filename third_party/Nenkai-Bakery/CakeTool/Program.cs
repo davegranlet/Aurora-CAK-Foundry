@@ -176,6 +176,7 @@ public class Program
         try
         {
             var builder = new CakeFileBuilder(versionMajor, versionMinor, verbs.Type, _loggerFactory);
+            builder.EncryptHeader = verbs.EncryptHeader;
             builder.RegisterFiles(verbs.InputDirectory);
             builder.Bake(verbs.OutputFile);
 
@@ -293,6 +294,9 @@ public class PackCakeVerbs
 
     [Option('t', "type", HelpText = "(Optional) Registry type. Defaults to Regular. Known valid options: Regular, RegistryPatch, External.")]
     public CakeRegistryType Type { get; set; } = CakeRegistryType.Regular;
+
+    [Option("encrypt-header", HelpText = "Protects the FDIR catalog using the output archive filename. Required for WWE 2K25 game-ready v9.3 archives.")]
+    public bool EncryptHeader { get; set; } = false;
 }
 
 [Verb("catalog-json", HelpText = "Writes the decoded CAK catalog as one Aurora-compatible JSON record.")]

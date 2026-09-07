@@ -2,6 +2,14 @@
 
 # Aurora CAK Foundry v1.7.7 fix and verification report
 
+## WWE 2K25 protected FDIR writer
+
+The v9.3 writer now applies the filename-derived stock catalog protection instead of emitting plain metadata. It protects the declared bytes of every table, preserves the plaintext CRC expected by the reader, scrambles catalog strings, protects the section header, and sets the encrypted-header flag.
+
+Verification: a disposable protected fixture passed encrypted-flag, non-plain-catalog, reopen, checksum, extraction, and payload checks. A full `bakedfile80` development rebuild then reopened and reproduced all 2,004 payloads and 1,137 folders. Its SHA-256 is `DA50A25904803B002864B69BCF0033A76974CEA5F91CE95E4E344441C63B0818`.
+
+The feature remains **Experimental** until WWE 2K25 returns success from its mount routine and the intended replacement is observed in-game.
+
 ## ACF-177-001 fixed
 
 Added an explicit FDIR 9.3 backend and game detection. The 9.9 reader remains separate and unchanged.

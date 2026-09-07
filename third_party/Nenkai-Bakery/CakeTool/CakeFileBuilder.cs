@@ -1,5 +1,6 @@
 ﻿using CakeTool.Compression;
 using CakeTool.GameFiles.Textures;
+using CakeTool.Crypto;
 using CakeTool.Hashing;
 
 using CommunityToolkit.HighPerformance;
@@ -49,6 +50,8 @@ public class CakeFileBuilder
     private string OriginalDirName { get; set; } = string.Empty;
 
     private BinaryStream _cakeStream;
+    private CakeCryptor? _cakeCryptor;
+    private uint _mainCryptoKey;
 
     private CakeRegistryType RegistryType { get; set; } = CakeRegistryType.Regular;
     private TextureDatabase _tdb;
@@ -454,6 +457,13 @@ public class CakeFileBuilder
         _logger?.LogInformation("Registry Type: {type}", RegistryType);
         _logger?.LogInformation("Number of files: {numFiles}", _files.Count);
 
+        if (EncryptHeader)
+        {
+            _cakeCryptor = new CakeCryptor(VersionMajor, VersionMinor);
+            _mainCryptoKey = _cakeCryptor.GenerateCryptoXorKey(Path.GetFileName(path));
+            _logger?.LogInformation("Protected catalog key: {key:X8}", _mainCryptoKey);
+        }
+
         if (IsAtLeastVersion(9, 1) && !_providedTextureDatabase && _tdb.TextureInfos.Count > 0)
         {
             _logger?.LogInformation("Creating _textures.tdb with {numTextures} (>=V9.1)...", _tdb.TextureInfos.Count);
@@ -478,7 +488,7 @@ public class CakeFileBuilder
         _cakeStream.WriteByte(VersionMinor);
 
         if (IsAtLeastVersion(8, 7))
-            _cakeStream.WriteUInt16((ushort)((byte)RegistryType << 8));
+            _cakeStream.WriteUInt16((ushort)(((byte)RegistryType << 8) | (EncryptHeader ? 0x8000 : 0)));
         else
             _cakeStream.WriteUInt16((ushort)(byte)RegistryType);
 
@@ -544,9 +554,7 @@ public class CakeFileBuilder
         sectionInfoWriter.WriteUInt32(tocSize);
 
         if (EncryptHeader)
-        {
-            throw new NotImplementedException($"{nameof(Bake)} Header encryption not yet implemented.");
-        }
+            _cakeCryptor!.EncryptHeaderData(sectionInfoBytes, _mainCryptoKey);
 
         _cakeStream.Write(sectionInfoBytes);
 
@@ -584,11 +592,7 @@ public class CakeFileBuilder
         byte[] bytes = ms.ToArray();
 
         if (EncryptHeader)
-        {
-            throw new NotImplementedException($"{nameof(Bake)}: Header encryption not yet implemented.");
-
-            sectionCrc = CRC32C.Hash(bytes);
-        }
+            sectionCrc = _cakeCryptor!.EncryptHeaderData(bytes.AsSpan(0, (int)sectionSize), _mainCryptoKey);
 
         _cakeStream.Write(bytes);
         _cakeStream.Align(0x04, grow: true);
@@ -706,7 +710,16 @@ public class CakeFileBuilder
         if (IsAtLeastVersion(8))
         {
             if (EncryptHeader)
-                throw new NotImplementedException($"{nameof(WriteString)}: String encryption (>=V8) not yet implemented.");
+            {
+                if (Encoding.ASCII.GetByteCount(str) > byte.MaxValue)
+                    throw new InvalidDataException("FDIR string exceeds the one-byte length limit.");
+                uint stringOffset = (uint)bs.Position;
+                byte[] bytes = Encoding.ASCII.GetBytes(str);
+                _cakeCryptor!.EncryptStringData(bytes, stringOffset);
+                bs.WriteByte((byte)bytes.Length);
+                bs.WriteBytes(bytes);
+                bs.WriteByte(0);
+            }
             else
             {
                 bs.WriteString(str, StringCoding.ByteCharCount);

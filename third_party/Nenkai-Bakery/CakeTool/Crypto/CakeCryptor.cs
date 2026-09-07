@@ -115,6 +115,44 @@ public class CakeCryptor : AbstractVersionableCakeEntity, IDisposable
         return Encoding.ASCII.GetString(bytes.AsSpan(0, bytes.Length - 1));
     }
 
+    public uint EncryptHeaderData(Span<byte> data, uint key)
+    {
+        if (!IsAtLeastVersion(8, 7))
+            throw new NotSupportedException($"Header writing is not implemented for Cake v{VersionMajor}.{VersionMinor}.");
+
+        uint lastKey = key;
+        uint crc = ~0u;
+        while (data.Length >= 8)
+        {
+            uint plain1 = BinaryPrimitives.ReadUInt32LittleEndian(data);
+            uint plain2 = BinaryPrimitives.ReadUInt32LittleEndian(data[4..]);
+            crc = BitOperations.Crc32C(crc, BinaryPrimitives.ReadUInt64LittleEndian(data));
+            uint cipher1 = plain1 ^ lastKey;
+            uint cipher2 = plain2 ^ cipher1;
+            BinaryPrimitives.WriteUInt32LittleEndian(data, cipher1);
+            BinaryPrimitives.WriteUInt32LittleEndian(data[4..], cipher2);
+            lastKey = cipher2;
+            data = data[8..];
+        }
+
+        while (data.Length > 0)
+        {
+            byte plain = data[0];
+            crc = BitOperations.Crc32C(crc, plain);
+            data[0] = (byte)(plain ^ (byte)lastKey);
+            lastKey ^= plain;
+            data = data[1..];
+        }
+        return ~crc;
+    }
+
+    public void EncryptStringData(Span<byte> data, uint stringTableOffset)
+    {
+        if (!IsAtLeastVersion(8, 7))
+            throw new NotSupportedException($"String writing is not implemented for Cake v{VersionMajor}.{VersionMinor}.");
+        ScrambleBytes(data, stringTableOffset);
+    }
+
     // SysCore::BakedDataFile::GetFileManglingKey
     /// <summary>
     /// Generates the data encryption key for the specified file entry.

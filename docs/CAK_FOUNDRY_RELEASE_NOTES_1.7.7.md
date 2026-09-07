@@ -31,7 +31,7 @@ Non-extractable catalog references are no longer displayed as files. They remain
 - WWE 2K25 catalog/name recovery: **Ready** for the verified v1.23 installation.
 - WWE 2K25 extraction: **Ready** for the tested raw-file workflow.
 - WWE 2K25 rebuilding: **Experimental** until a rebuilt CAK is accepted and its content is observed in-game.
-- Current blocker: the v1.7.7 development writer preserves payloads but does not yet apply the stock FDIR 9.3 catalog-protection layer; WWE 2K25 v1.23 rejected the resulting test archive.
+- The missing stock FDIR 9.3 catalog-protection layer is now implemented and passes a full 2,004-file offline rebuild/reopen/SHA verification. Live game acceptance remains the final Experimental gate.
 - Other WWE 2K25 patches: **Research** until their archives are supplied and checked.
 
 No WWE files or Oodle binaries are included.
