@@ -127,7 +127,7 @@ function scanBakeFolder(sourceRoot) {
       if (!relative || relative.split('/').includes('..')) throw new Error('A BakeMe entry escapes the selected folder.');
       if (entry.isDirectory()) { const id = folders.length; folders.push({ relative, leaf: entry.name, parent: folderId, children: [], files: [], hash: fnv1a64(relative.toLowerCase()) }); folders[folderId].children.push(id); walk(target, id); }
       else if (entry.isFile()) {
-        if (relative.toLowerCase() === '.aurora-cak-manifest.json' || relative.toLowerCase() === 'aurora_forge_extraction_report.txt') continue;
+        if (['.aurora-cak-manifest.json', '.aurora-cak-external-references.json', 'aurora_forge_extraction_report.txt'].includes(relative.toLowerCase())) continue;
         const size = fs.statSync(target).size; if (size > 0xffffffff) throw new Error(`${relative} exceeds the 4 GB per-file CAK limit.`);
         const preserved = preservedEntries.get(relative.toLowerCase());
         const validHash = (value) => /^[0-9a-f]{16}$/i.test(String(value || ''));

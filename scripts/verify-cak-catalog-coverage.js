@@ -17,12 +17,16 @@ const results = [];
 let files = 0;
 let named = 0;
 let unresolved = 0;
+let metadataReferences = 0;
 for (const name of archives) {
   const session = openArchive(path.join(gameFolder, name), dictionary);
-  const resolved = session.files.filter((file) => file.nameResolved).length;
-  results.push({ archive: name, files: session.files.length, named: resolved, unresolved: session.files.length - resolved });
-  files += session.files.length;
+  const payloads = session.files.filter((file) => file.extractable && file.expandedSize > 0);
+  const resolved = payloads.filter((file) => file.nameResolved).length;
+  const references = session.files.length - payloads.length;
+  results.push({ archive: name, payloads: payloads.length, named: resolved, unresolved: payloads.length - resolved, metadataReferences: references });
+  files += payloads.length;
   named += resolved;
-  unresolved += session.files.length - resolved;
+  unresolved += payloads.length - resolved;
+  metadataReferences += references;
 }
-console.log(JSON.stringify({ catalogEntries: Object.keys(dictionary).length, archives: archives.length, files, named, unresolved, coveragePercent: files ? Number((named * 100 / files).toFixed(4)) : 0, results }, null, 2));
+console.log(JSON.stringify({ catalogEntries: Object.keys(dictionary).length, archives: archives.length, payloads: files, named, unresolved, metadataReferences, coveragePercent: files ? Number((named * 100 / files).toFixed(4)) : 0, results }, null, 2));

@@ -1,8 +1,9 @@
 (function () {
   'use strict';
   const api = window.WWE2K26Desktop;
-  const state = { archivePath: '', outputPath: '', repackSource: '', page: 0, pages: 1, pageSize: 100, query: '', type: '', scope: 'resolved', items: [], selected: new Set() };
+  const state = { archivePath: '', outputPath: '', repackSource: '', page: 0, pages: 1, pageSize: 100, query: '', type: '', scope: 'resolved', items: [], selected: new Set(), selectableIds: null, selectableTotal: 0 };
   const byId = (id) => document.getElementById(id);
+  const parentFolder = (name) => { const normalized = String(name || '').replace(/\\/g, '/'); const split = normalized.lastIndexOf('/'); return split > 0 ? normalized.slice(0, split) : 'Archive root'; };
   const formatBytes = (value) => {
     let bytes = Number(value) || 0;
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -29,15 +30,16 @@
   function renderRows(result) {
     state.items = result.items || [];
     state.pages = result.pages || 1;
+    state.selectableTotal = Number(result.selectableTotal) || 0;
     byId('cakResults').replaceChildren(...state.items.map((item) => {
       const row = document.createElement('tr');
       const boxCell = document.createElement('td');
       const box = document.createElement('input');
-      box.type = 'checkbox'; box.checked = state.selected.has(item.id); box.disabled = item.extractable === false; box.setAttribute('aria-label', item.extractable === false ? `${item.name} is an external reference with no payload in this archive` : (item.nameResolved ? `Select ${item.name}` : `Select raw hash entry ${item.name}`));
+      box.type = 'checkbox'; box.checked = state.selected.has(item.id); box.disabled = item.extractable === false || !item.nameResolved; box.setAttribute('aria-label', item.extractable === false ? `${item.name} is an external reference with no payload in this archive` : (item.nameResolved ? `Select ${item.name}` : 'Catalog path unavailable; extraction is disabled'));
       box.addEventListener('change', () => { if (box.checked) state.selected.add(item.id); else state.selected.delete(item.id); updateSelected(); });
       boxCell.appendChild(box);
-      const label = item.extractable === false ? `${item.name} (external reference)` : (!item.nameResolved ? `${item.name} (raw hash name)` : item.name);
-      const values = [label, item.type || 'bin', formatBytes(item.storedSize), formatBytes(item.expandedSize), item.folderName || `Unresolved folder ${item.folderIndex}`];
+      const label = item.extractable === false ? `${item.name} (external reference)` : (!item.nameResolved ? 'Catalog path unavailable (extraction disabled)' : item.name);
+      const values = [label, item.type || 'bin', formatBytes(item.storedSize), formatBytes(item.expandedSize), item.folderName || (item.nameResolved ? parentFolder(item.name) : 'Catalog path unavailable')];
       row.appendChild(boxCell);
       values.forEach((value, index) => { const cell = document.createElement('td'); cell.textContent = value; if (index === 0) { cell.title = item.hash; if (item.nameResolved) cell.classList.add('cak-known-name'); } row.appendChild(cell); });
       return row;
@@ -47,7 +49,8 @@
     byId('cakPageLabel').textContent = `Page ${state.page + 1} of ${state.pages} - ${result.total.toLocaleString()} result(s)`;
     byId('cakPrevious').disabled = state.page <= 0;
     byId('cakNext').disabled = state.page + 1 >= state.pages;
-    byId('cakSelectPage').checked = state.items.length > 0 && state.items.every((item) => state.selected.has(item.id));
+    byId('cakSelectPage').checked = state.selectableTotal > 0 && state.selected.size === state.selectableTotal;
+    byId('cakSelectPage').indeterminate = state.selected.size > 0 && state.selected.size < state.selectableTotal;
     updateSelected();
   }
   async function search() {
@@ -62,7 +65,7 @@
     byId('cakSummarySize').textContent = formatBytes(summary.totalExpanded);
     byId('cakSummaryNames').textContent = summary.readyFiles.toLocaleString();
     byId('cakDevDetails').textContent = JSON.stringify(summary, null, 2);
-    state.page = 0; state.selected.clear(); renderRows(result.results);
+    state.page = 0; state.selected.clear(); state.selectableIds = null; renderRows(result.results);
   }
   async function openArchive(scope) {
     const openEveryArchive = scope === 'all-archives';
@@ -94,7 +97,7 @@
       message('cakOpenMessage', openEveryArchive
         ? `${result.archiveCount} CAKs are open together with ${result.summary.fileCount.toLocaleString()} total entries; ${rejectedCount} archive(s) were rejected by safety checks. Search and extract across the accepted archives from this list.`
         : browseAll
-        ? `${result.summary.archiveName} is open with all ${result.summary.fileCount.toLocaleString()} entries: ${result.summary.rawHashPayloads.toLocaleString()} extractable raw-hash payload(s) and ${result.summary.externalReferences.toLocaleString()} external reference(s) with no payload in this archive.`
+        ? `${result.summary.archiveName} is open with ${result.summary.fileCount.toLocaleString()} stored payload file(s). ${result.summary.externalReferences.toLocaleString()} non-extractable catalog reference(s) are tracked internally and hidden from the file list.`
         : `${result.summary.archiveName} is ready with ${result.summary.readyFiles.toLocaleString()} named payload file(s).`, rejectedCount ? 'bad' : 'good');
     } catch (error) {
       message('cakOpenMessage', error.message, 'bad');
@@ -163,12 +166,28 @@
       button.disabled = false;
     }
   });
-  byId('cakSearchButton').addEventListener('click', async () => { state.query = byId('cakSearch').value.trim(); state.type = byId('cakType').value; state.scope = byId('cakScope').value; state.page = 0; state.selected.clear(); try { await search(); } catch (error) { message('cakOpenMessage', error.message, 'bad'); } });
+  byId('cakSearchButton').addEventListener('click', async () => { state.query = byId('cakSearch').value.trim(); state.type = byId('cakType').value; state.scope = byId('cakScope').value; state.page = 0; state.selected.clear(); state.selectableIds = null; try { await search(); } catch (error) { message('cakOpenMessage', error.message, 'bad'); } });
   byId('cakScope').addEventListener('change', () => byId('cakSearchButton').click());
   byId('cakSearch').addEventListener('keydown', (event) => { if (event.key === 'Enter') byId('cakSearchButton').click(); });
   byId('cakPrevious').addEventListener('click', async () => { if (state.page > 0) { state.page -= 1; await search(); } });
   byId('cakNext').addEventListener('click', async () => { if (state.page + 1 < state.pages) { state.page += 1; await search(); } });
-  byId('cakSelectPage').addEventListener('change', (event) => { state.items.filter((item) => item.extractable !== false).forEach((item) => event.target.checked ? state.selected.add(item.id) : state.selected.delete(item.id)); renderRows({ items: state.items, pages: state.pages, page: state.page, total: Number(byId('cakPageLabel').textContent.match(/- ([\d,]+)/)?.[1].replace(/,/g, '') || state.items.length), types: [] }); });
+  byId('cakSelectPage').addEventListener('change', async (event) => {
+    const checked = event.target.checked;
+    event.target.disabled = true;
+    try {
+      if (!state.selectableIds) {
+        const result = await api.searchCakArchive({ query: state.query, type: state.type, scope: state.scope, page: 0, pageSize: state.pageSize, includeSelectableIds: true });
+        state.selectableIds = result.selectableIds || [];
+      }
+      state.selectableIds.forEach((id) => checked ? state.selected.add(id) : state.selected.delete(id));
+      await search();
+    } catch (error) {
+      event.target.checked = !checked;
+      message('cakOpenMessage', error.message, 'bad');
+    } finally {
+      event.target.disabled = false;
+    }
+  });
   byId('cakChooseOutput').addEventListener('click', async () => { try { const result = await api.chooseCakOutput(); if (!result.ok) return; state.outputPath = result.path; byId('cakOutputPath').textContent = result.path; updateSelected(); } catch (error) { message('cakExtractMessage', error.message, 'bad'); } });
   byId('cakExtract').addEventListener('click', async () => { const count = state.selected.size; if (!count || !state.outputPath) return; if (!window.confirm(`Extract ${count} selected file(s) into the separate output folder?\n\nThe CAK will not be changed.`)) return; byId('cakExtract').disabled = true; message('cakExtractMessage', 'Extracting and checking files. Large files can take a little while...', 'working'); try { const result = await api.extractCakEntries({ ids: [...state.selected], outputRoot: state.outputPath, overwrite: byId('cakOverwrite').checked }); message('cakExtractMessage', `${result.succeeded} succeeded; ${result.failed} failed. An extraction report was saved with the files.`, result.failed ? 'bad' : 'good'); byId('cakOpenOutput').disabled = false; } catch (error) { message('cakExtractMessage', error.message, 'bad'); } finally { updateSelected(); } });
   byId('cakOpenOutput').addEventListener('click', async () => { try { await api.openCakOutput(); } catch (error) { message('cakExtractMessage', error.message, 'bad'); } });

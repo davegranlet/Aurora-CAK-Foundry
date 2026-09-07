@@ -829,7 +829,7 @@ ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
   if (process.platform !== 'win32') throw new Error('Native CAK extraction is currently Windows-only because WWE 2K26 supplies a Windows Oodle library. Linux can still browse and search the archive catalog safely.');
   if (!currentCakSession) throw new Error('Open a CAK archive first.');
   const ids = [...new Set(payload && payload.all ? currentCakSession.files.filter((file) => file && file.extractable !== false).map((file) => Number(file.id)) : (Array.isArray(payload && payload.ids) ? payload.ids.map(Number) : []))];
-  if (!ids.length || (!(payload && payload.all) && ids.length > 5000)) throw new Error('Choose between 1 and 5,000 files per extraction job.');
+  if (!ids.length || ids.length > 500000) throw new Error('Choose between 1 and 500,000 files per extraction job.');
   const outputRoot = path.resolve(String(payload && payload.outputRoot || ''));
   if (!fs.existsSync(outputRoot) || !fs.statSync(outputRoot).isDirectory()) throw new Error('Choose a valid extraction folder.');
   const config = readToolConfig();
@@ -838,9 +838,8 @@ ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
   if (files.length !== ids.length) throw new Error('One or more selected entries no longer exist. Reopen the archive.');
   if (files.some((file) => !file.extractable)) throw new Error('One or more selected catalog entries store their payload in another archive and cannot be extracted from this CAK alone.');
   const unresolvedPayloads = files.filter((file) => !file.nameResolved);
-  if (payload && payload.all && unresolvedPayloads.length) throw new Error(`Extract All requires 100% real-name coverage. ${unresolvedPayloads.length.toLocaleString()} stored payload(s) still lack their genuine virtual paths, so nothing was extracted.`);
+  if (unresolvedPayloads.length) throw new Error(`Extraction requires genuine catalog paths. ${unresolvedPayloads.length.toLocaleString()} selected payload(s) lack verified paths, so nothing was extracted.`);
   const totalBytes = files.reduce((sum, file) => sum + file.expandedSize, 0);
-  if (!(payload && payload.all) && totalBytes > 20 * 1024 * 1024 * 1024) throw new Error('This extraction job is larger than 20 GB. Choose a smaller group.');
   if (typeof fs.statfsSync === 'function') {
     const storage = fs.statfsSync(outputRoot);
     const freeBytes = Number(storage.bavail) * Number(storage.bsize);
@@ -939,6 +938,33 @@ ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
       extractionManifest.entries = [...merged.values()];
     }
     fs.writeFileSync(extractionManifestPath, JSON.stringify(extractionManifest, null, 2) + '\n', 'utf8');
+    const payloadOwners = new Map();
+    for (const file of currentCakSession.files.filter((item) => item.extractable !== false && item.nameResolved)) {
+      const key = String(file.name || '').toLowerCase();
+      if (!payloadOwners.has(key)) payloadOwners.set(key, new Set());
+      payloadOwners.get(key).add(path.basename(file.sourceArchivePath || currentCakSession.archivePath));
+    }
+    const externalReferenceEntries = currentCakSession.files.filter((file) => file.extractable === false).map((file) => ({
+      virtualPath: file.name,
+      fileHash: file.hash || '',
+      folderIndex: file.folderIndex,
+      folderHash: currentCakSession.folders[file.folderIndex]?.hash || '',
+      type: file.type || '',
+      expectedExpandedSize: file.expandedSize || 0,
+      referencedByArchive: path.basename(file.sourceArchivePath || currentCakSession.archivePath),
+      matchingPayloadArchives: [...(payloadOwners.get(String(file.name || '').toLowerCase()) || [])],
+      status: 'catalog-reference-no-local-payload'
+    }));
+    if (externalReferenceEntries.length) {
+      const referencePath = path.join(outputRoot, '.aurora-cak-external-references.json');
+      const referenceReport = {
+        readabilityNote: 'I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.',
+        schema: 'aurora-forge-cak-external-references/v1',
+        purpose: 'Tracks catalog references that have no payload in the referencing CAK so their owning archives and relationships can be researched without showing them as extractable files.',
+        entries: externalReferenceEntries
+      };
+      fs.writeFileSync(referencePath, JSON.stringify(referenceReport, null, 2) + '\n', 'utf8');
+    }
     sendProgress({ phase: 'complete', processed: results.length, total: files.length, succeeded, failed: results.length - succeeded, archiveIndex: archiveGroups.length, archiveCount: archiveGroups.length, archive: '' });
     return { ok: succeeded === results.length, succeeded, failed: results.length - succeeded, total: results.length, outputRoot, results };
 });

@@ -121,14 +121,13 @@ function decodeStringTable(input) {
     const shift = BigInt(shiftValue & 63);
     return shift === 0n ? u64(value) : u64((u64(value) << shift) | (u64(value) >> (64n - shift)));
   };
-  let cursor = 1;
-  let processed = 0;
-  while (cursor + 1 < output.length) {
-    cursor += 1;
+  let cursor = 0;
+  while (cursor < output.length) {
+    const recordOffset = cursor;
     const length = output[cursor];
     cursor += 1;
-    if (cursor + length > output.length) throw new Error('The CAK string table contains an invalid name length.');
-    const recordPosition = BigInt(processed + 2);
+    if (cursor + length >= output.length) throw new Error('The CAK string table contains an invalid name length.');
+    const recordPosition = BigInt(recordOffset);
     for (let index = 0; index < length; index += 1) {
       let state = u64(BigInt(index) * -0x61c8864680b583ebn);
       state = u64(state ^ u64((recordPosition << 32n) ^ recordPosition));
@@ -140,7 +139,8 @@ function decodeStringTable(input) {
       output[cursor] = shifted ^ Number(mask & 0xffn);
       cursor += 1;
     }
-    processed += 2 + length;
+    if (output[cursor] !== 0) throw new Error('The CAK string table contains an unterminated name record.');
+    cursor += 1;
   }
   return output;
 }
@@ -366,7 +366,7 @@ function openArchive(archivePath, dictionary = {}) {
       const selectedName = file.nativeNameVerified ? extractionPath(file.nativeName) : knownName;
       file.name = selectedName && !path.isAbsolute(selectedName) && !selectedName.split(/[\\/]/).includes('..') ? selectedName.replace(/\\/g, '/') : `Unresolved/${path.basename(resolved, path.extname(resolved))}/${safeGeneratedFolder(file, folderTable.folders)}/${safeGeneratedName(file)}`;
       file.nameResolved = Boolean(selectedName);
-      file.folderName = folderTable.folders[file.folderIndex] && folderTable.folders[file.folderIndex].name || '';
+      file.folderName = folderTable.folders[file.folderIndex] && folderTable.folders[file.folderIndex].name || (selectedName ? path.posix.dirname(extractionPath(selectedName)) : '');
       file.availability = file.extractable ? (file.nameResolved ? 'ready' : 'raw-hash') : 'external-reference';
     }
     return {
@@ -389,13 +389,14 @@ function buildNativeDictionary(archivePaths) {
 }
 
 function publicSummary(session) {
-  const totalExpanded = session.files.reduce((sum, file) => sum + file.expandedSize, 0);
-  const resolvedNames = session.files.filter((file) => file.nameResolved).length;
+  const payloadFiles = session.files.filter((file) => file.extractable !== false);
+  const totalExpanded = payloadFiles.reduce((sum, file) => sum + file.expandedSize, 0);
+  const resolvedNames = payloadFiles.filter((file) => file.nameResolved).length;
   const resolvedFolders = session.folders.filter((folder) => folder.nameResolved).length;
   const readyFiles = session.files.filter((file) => file.nameResolved && file.extractable).length;
   const rawHashPayloads = session.files.filter((file) => !file.nameResolved && file.extractable).length;
   const externalReferences = session.files.filter((file) => !file.extractable).length;
-  return { archiveName: session.archiveName, archivePath: session.archivePath, archiveSize: session.archiveSize, fileCount: session.files.length, folderCount: session.folders.length, totalExpanded, resolvedNames, unresolvedNames: session.files.length - resolvedNames, resolvedFolders, readyFiles, rawHashPayloads, externalReferences, keyRecovered: session.keyRecovered, warnings: session.warnings };
+  return { archiveName: session.archiveName, archivePath: session.archivePath, archiveSize: session.archiveSize, fileCount: payloadFiles.length, catalogEntryCount: session.files.length, folderCount: session.folders.length, totalExpanded, resolvedNames, unresolvedNames: payloadFiles.length - resolvedNames, resolvedFolders, readyFiles, rawHashPayloads, externalReferences, keyRecovered: session.keyRecovered, warnings: session.warnings };
 }
 
 function searchFiles(session, options = {}) {
@@ -404,9 +405,12 @@ function searchFiles(session, options = {}) {
   const scope = ['resolved', 'unresolved', 'all'].includes(options.scope) ? options.scope : 'resolved';
   const pageSize = Math.min(250, Math.max(10, Number(options.pageSize) || 100));
   const page = Math.max(0, Number(options.page) || 0);
-  const filtered = session.files.filter((file) => (scope === 'all' || (scope === 'resolved' ? file.nameResolved : !file.nameResolved)) && (!query || file.name.toLowerCase().includes(query) || String(file.hash || '').includes(query) || file.type.includes(query)) && (!type || file.type === type));
+  const filtered = session.files.filter((file) => file.extractable !== false && (scope === 'all' || (scope === 'resolved' ? file.nameResolved : !file.nameResolved)) && (!query || file.name.toLowerCase().includes(query) || String(file.hash || '').includes(query) || file.type.includes(query)) && (!type || file.type === type));
   const items = filtered.slice(page * pageSize, (page + 1) * pageSize).map(({ chunks, flags, ...file }) => file);
-  return { items, total: filtered.length, page, pageSize, pages: Math.max(1, Math.ceil(filtered.length / pageSize)), types: [...new Set(session.files.map((file) => file.type).filter(Boolean))].sort() };
+  const selectable = filtered.filter((file) => file.extractable !== false && file.nameResolved);
+  const result = { items, total: filtered.length, selectableTotal: selectable.length, page, pageSize, pages: Math.max(1, Math.ceil(filtered.length / pageSize)), types: [...new Set(session.files.map((file) => file.type).filter(Boolean))].sort() };
+  if (options.includeSelectableIds === true) result.selectableIds = selectable.map((file) => file.id);
+  return result;
 }
 
 module.exports = { openArchive, publicSummary, searchFiles, buildNameCandidates, buildNativeDictionary, fnv1a64, decodePairs, decodeStringTable, readStringRecord, keyFromFirstMask };

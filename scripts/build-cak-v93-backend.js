@@ -12,7 +12,7 @@ const localSdk = path.join(root, '..', '_toolchains', 'dotnet9', 'dotnet.exe');
 const dotnet = fs.existsSync(localSdk) ? localSdk : 'dotnet';
 
 fs.rmSync(publish, { recursive: true, force: true });
-const result = cp.spawnSync(dotnet, ['publish', project, '--configuration', 'Release', '--runtime', 'win-x64', '--self-contained', 'true', '--output', publish], {
+const result = cp.spawnSync(dotnet, ['publish', project, '--configuration', 'Release', '--runtime', 'win-x64', '--self-contained', 'true', '--no-restore', '--output', publish], {
   cwd: root,
   stdio: 'inherit',
   windowsHide: true

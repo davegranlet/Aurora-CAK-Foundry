@@ -2795,3 +2795,46 @@ body.standalone-tool .app-main { grid-column: 1 / -1 !important; min-width: 0 !i
 @media(max-width:620px){.handbook-evidence-record summary{grid-template-columns:1fr}}
 body.standalone-tool .app-sidebar { display: none !important; }
 body.standalone-tool .app-main { grid-column: 1 / -1 !important; min-width: 0 !important; width: 100% !important; }
+
+/* Aurora CAK Foundry standalone identity: forged metal, signal red, and black. */
+body.cak-foundry-edition {
+  --cak-red:#ef263f; --cak-red-dark:#750817; --cak-silver:#d9dde3; --cak-steel:#7f8995;
+  color:#d8dce2;
+  background:
+    linear-gradient(115deg, transparent 0 47%, rgba(239,38,63,.045) 47% 47.35%, transparent 47.35% 100%),
+    radial-gradient(circle at 78% 0, rgba(239,38,63,.15), transparent 35%),
+    #060708;
+}
+body.cak-foundry-edition::before {
+  background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:32px 32px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.65),transparent 75%);
+}
+.cak-foundry-edition .app-main { padding:28px clamp(18px,4vw,64px) 64px; }
+.cak-foundry-edition .app-topbar {
+  position:relative; overflow:hidden; border:1px solid rgba(217,221,227,.23); border-radius:3px;
+  background:linear-gradient(105deg,#0a0b0d 0%,#171a1f 68%,#29070d 100%); box-shadow:0 20px 55px rgba(0,0,0,.48);
+}
+.cak-foundry-edition .app-topbar::before { content:""; position:absolute; inset:0 auto 0 0; width:5px; background:var(--cak-red); box-shadow:0 0 24px var(--cak-red); }
+.cak-foundry-edition .app-topbar::after { content:"FDIR // ARCHIVE SYSTEM"; position:absolute; right:24px; top:18px; color:rgba(217,221,227,.3); font:700 10px var(--mono); letter-spacing:.18em; }
+.cak-foundry-edition .app-topbar .eyebrow,.cak-foundry-edition .section-label,.cak-foundry-edition .part-label { color:#ff5267 !important; letter-spacing:.18em; }
+.cak-foundry-edition .app-topbar h1 { color:#f1f3f5; text-transform:uppercase; letter-spacing:-.025em; text-shadow:0 0 28px rgba(255,255,255,.08); }
+.cak-foundry-edition .ai-hero,.cak-foundry-edition .ai-panel {
+  position:relative; border:1px solid rgba(217,221,227,.16) !important; border-radius:3px !important;
+  background:linear-gradient(145deg,rgba(25,28,33,.97),rgba(8,9,11,.98)) !important; box-shadow:0 18px 44px rgba(0,0,0,.36) !important;
+}
+.cak-foundry-edition .ai-panel::before { content:""; position:absolute; left:-1px; top:20px; width:3px; height:38px; background:var(--cak-red); box-shadow:0 0 15px rgba(239,38,63,.6); }
+.cak-foundry-edition .cak-hero { border-color:rgba(239,38,63,.42) !important; background:linear-gradient(125deg,#16080b,#111419 62%,#242930) !important; }
+.cak-foundry-edition .cak-hero-status,.cak-foundry-edition .cak-summary-grid>div,.cak-foundry-edition .cak-table-shell { border-radius:2px; border-color:rgba(217,221,227,.18); background:#090b0e; }
+.cak-foundry-edition .cak-status-badge { border:1px solid rgba(239,38,63,.46); border-radius:2px; background:#310a11; color:#ff8392; text-transform:uppercase; letter-spacing:.08em; }
+.cak-foundry-edition .cak-status-badge.ready { border-color:rgba(184,194,204,.4); background:#18201e; color:#b9e3d5; }
+.cak-foundry-edition .ai-btn { border:1px solid #ff5267 !important; border-radius:2px !important; background:linear-gradient(135deg,#9d0d22,#ef263f) !important; color:#fff !important; box-shadow:0 8px 24px rgba(239,38,63,.18); text-transform:uppercase; letter-spacing:.07em; }
+.cak-foundry-edition .ai-btn.secondary { border-color:rgba(217,221,227,.3) !important; background:linear-gradient(180deg,#282c32,#17191d) !important; color:#d9dde3 !important; }
+.cak-foundry-edition .ai-btn:hover { border-color:#fff !important; box-shadow:0 0 20px rgba(239,38,63,.28); }
+.cak-foundry-edition .cak-field select,.cak-foundry-edition .cak-search-row input,.cak-foundry-edition .cak-search-row select,.cak-foundry-edition .cak-path-row code { border-radius:2px; border:1px solid rgba(217,221,227,.17); background:#050607; color:#dce1e7; }
+.cak-foundry-edition .cak-summary-grid strong,.cak-foundry-edition .cak-table th,.cak-foundry-edition .cak-progress-heading span { color:#f45a6d; }
+.cak-foundry-edition .cak-table th { background:#171a1f; border-bottom:1px solid #6c111f; text-transform:uppercase; letter-spacing:.06em; }
+.cak-foundry-edition .cak-table tbody tr:hover { background:rgba(239,38,63,.07); }
+.cak-foundry-edition .cak-progress-panel { border-radius:2px; border-color:rgba(239,38,63,.42); background:#08090b; }
+.cak-foundry-edition .cak-progress-panel progress { accent-color:var(--cak-red); }
+.cak-foundry-edition code { color:#e6e9ed; }

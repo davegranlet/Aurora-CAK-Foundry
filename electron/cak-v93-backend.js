@@ -41,6 +41,7 @@ function openArchive(archivePath, toolPath) {
     folders: catalog.folders.map((folder) => ({ ...folder, path: folder.name })),
     files: catalog.files.map((file) => ({
       ...file, protected: file.protectedPayload, nativeName: file.name, nativeNameVerified: true,
+      folderName: catalog.folders[file.folderIndex]?.name || path.posix.dirname(String(file.name || '').replace(/\\/g, '/')),
       nameResolved: true, availability: file.extractable ? 'ready' : 'external-reference', sourceArchivePath: selected,
       sourceArchiveName: path.basename(selected), sourceArchiveKey: catalog.archiveKey
     })),
@@ -62,7 +63,7 @@ function buildCak(sourceRoot, outputPath, toolPath, oodlePath) {
 
 function walk(root, current = root, output = []) {
   for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-    if (entry.name === '.aurora-cak-manifest.json' || entry.name === 'Aurora_Forge_Extraction_Report.txt') continue;
+    if (['.aurora-cak-manifest.json', '.aurora-cak-external-references.json', 'Aurora_Forge_Extraction_Report.txt'].includes(entry.name)) continue;
     const full = path.join(current, entry.name);
     if (entry.isDirectory()) walk(root, full, output);
     else if (entry.isFile()) output.push({ full, relative: path.relative(root, full).replace(/\\/g, '/') });

@@ -9,6 +9,7 @@
   "scripts": {
     "build:helper": "node scripts/build-cak-helper.js",
     "build:v93": "node scripts/build-cak-v93-backend.js",
+    "build:portable": "node scripts/build-portable-windows.js",
     "verify:cak": "node scripts/verify-cak-extraction.js",
     "verify:repack": "node scripts/verify-repackager.js",
     "verify:raw": "node scripts/verify-raw-hash-roundtrip.js",

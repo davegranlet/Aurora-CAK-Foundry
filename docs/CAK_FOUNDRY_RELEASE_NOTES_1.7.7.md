@@ -4,6 +4,10 @@
 
 v1.7.7 adds WWE 2K25 PC support without changing the existing WWE 2K26 FDIR 9.9 path.
 
+The file-browser Select All checkbox now selects every extractable file matching the active CAK/search across all result pages. External references without stored payloads are excluded automatically.
+
+Non-extractable catalog references are no longer displayed as files. They remain tracked in an extraction-side structured reference report for future cross-archive relationship research.
+
 ## Added
 
 - Detects WWE 2K25 FDIR 9.3 archives separately from WWE 2K26 FDIR 9.9 archives.
@@ -27,6 +31,7 @@ v1.7.7 adds WWE 2K25 PC support without changing the existing WWE 2K26 FDIR 9.9 
 - WWE 2K25 catalog/name recovery: **Ready** for the verified v1.23 installation.
 - WWE 2K25 extraction: **Ready** for the tested raw-file workflow.
 - WWE 2K25 rebuilding: **Experimental** until a rebuilt CAK is accepted and its content is observed in-game.
+- Current blocker: the v1.7.7 development writer preserves payloads but does not yet apply the stock FDIR 9.3 catalog-protection layer; WWE 2K25 v1.23 rejected the resulting test archive.
 - Other WWE 2K25 patches: **Research** until their archives are supplied and checked.
 
 No WWE files or Oodle binaries are included.

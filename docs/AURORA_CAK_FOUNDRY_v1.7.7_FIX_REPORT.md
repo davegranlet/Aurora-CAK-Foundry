@@ -27,3 +27,47 @@ The raw 9.3 build path now preserves a supplied `_textures.tdb`; automatic gener
 ## Rebuild verification
 
 A representative named WWE 2K25 payload was built, reopened, extracted, and compared with SHA-256. Source and recovered hashes matched. In-game acceptance remains **Experimental** pending a user mount test.
+
+## ACF-177-005 fixed
+
+Coverage now separates extractable payloads from zero-payload metadata references. Current WWE 2K26 v1.16 reports 412,095 payloads and 279 metadata references without treating the references as failed files.
+
+## ACF-177-006 fixed
+
+Corrected the native WWE 2K26 string-table record cursor and terminator validation. The final 15 paths now decode directly from `bakedfile90.cak` as the two WrestleMania 42 arena sets and the CAEV Jeff Hardy set. All reconstructed paths match their stored FNV-1a 64-bit hashes.
+
+Verification: all 15 current archives open and all 412,095 stored payloads have genuine paths; zero remain unresolved.
+
+## ACF-177-007 fixed
+
+The identity-preservation verifier now chooses genuine payload specimens by storage profile without requiring unresolved catalog entries.
+
+Verification: compressed/protected single and multi, stored/protected single, stored/plain single, and stored/plain multi payloads all survive manifest-driven rebuild, reopen, and byte comparison.
+
+## ACF-177-008 fixed
+
+The release candidate is packaged from the dedicated Foundry repository. The WWE 2K25 backend source is byte-identical to the integrated copy, and the packaged binary comes from the dedicated copy that passed all 15 v1.23 archives, 386,873 files, and 93,738 folders with zero unresolved names.
+
+## ACF-177-009 fixed
+
+The portable builder now expands the packaged-folder wildcard correctly and refuses to report success unless a nonempty ZIP exists. The resulting ZIP extracts and launches from a newly created clean folder.
+
+## ACF-177-010 fixed
+
+Standalone staging now strips the full Aurora Forge sidebar and links to absent desktop pages, applies the standalone layout, and displays the exact v1.7.7 identity in the window title. Packaging stops if any full-app navigation remains.
+
+## ACF-177-011 fixed
+
+The WWE 2K25 adapter now supplies the decoded folder name expected by the shared file browser. Genuine full paths and the Folder column therefore report the same verified directory instead of an `Unresolved folder` placeholder.
+
+The full virtual filename and Folder column are two views of the same path. The renderer now derives the latter from the former when necessary. Unknown paths are explicitly unavailable and non-extractable rather than being emitted as anonymous files.
+
+## ACF-177-012 fixed
+
+The results-header checkbox now requests and selects every extractable ID matching the active CAK browser filters, not merely the current 100-row page. Its checked and partial states represent the complete result set, and external references without stored payloads remain excluded.
+
+Verification: a synthetic four-page catalog produced 357 results, 349 extractable payloads, 100 visible rows, and exactly 349 unique Select All IDs.
+
+## ACF-177-013 fixed
+
+The end-user browser now shows only genuine stored payload files. Non-extractable catalog references are hidden but preserved as structured metadata in `.aurora-cak-external-references.json`, including virtual path, hashes, referencing archive, expected size, and any matching payload-owning archives visible in the opened CAK set. The rebuilder never packs this sidecar.
