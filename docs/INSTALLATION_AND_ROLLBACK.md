@@ -1,6 +1,6 @@
 **Readability note:** I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.
 
-# Aurora CAK Foundry v1.7.7 installation, usage, and rollback
+# Aurora CAK Foundry v1.7.8 installation, usage, and rollback
 
 ## Install and launch
 

@@ -6,8 +6,8 @@ Aurora CAK Foundry is the standalone WWE 2K25 and WWE 2K26 `.cak` extractor, reb
 
 ## Release identity
 
-- Public release: **v1.7.7**
-- Runtime version: **1.7.7**
+- Public release: **v1.7.8**
+- Runtime version: **1.7.8**
 - Status: **Ready** for WWE 2K25 catalog/name recovery and extraction; **Experimental** for WWE 2K25 rebuilding until an in-game mount is confirmed; existing WWE 2K26 labels remain unchanged
 
 Each public artifact keeps its own name, version, checksum, notes, bug report, and fix report. An older package is never silently replaced by a newer build.
@@ -23,7 +23,7 @@ Each public artifact keeps its own name, version, checksum, notes, bug report, a
 
 No WWE archives, Oodle DLLs, extracted game assets, or personal paths are included. The program uses the Oodle library from the user's own game installation when required.
 
-See [v1.7.7 release notes](docs/CAK_FOUNDRY_RELEASE_NOTES_1.7.7.md), [bug report](docs/AURORA_CAK_FOUNDRY_v1.7.7_BUG_REPORT.md), and [fix report](docs/AURORA_CAK_FOUNDRY_v1.7.7_FIX_REPORT.md).
+See [v1.7.8 release notes](docs/CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md), [bug report](docs/AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md), and [fix report](docs/AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md).
 
 The WWE 2K25 FDIR 9.3 compatibility layer uses Nenkai's MIT-licensed Bakery/CakeTool source with its copyright, license, upstream README, and integration notice preserved. Aurora does not present that third-party work as original Aurora code.
 

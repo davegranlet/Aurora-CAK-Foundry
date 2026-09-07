@@ -1,6 +1,6 @@
 {
   "name": "aurora-cak-foundry",
-  "version": "1.7.7",
+  "version": "1.7.8",
   "description": "Standalone WWE 2K25 and WWE 2K26 CAK archive extractor, rebuilder, baker, and validator.",
   "main": "electron/standalone-cak-main.js",
   "author": "VikingStudios",
