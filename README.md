@@ -8,7 +8,7 @@ Aurora CAK Foundry is the standalone WWE 2K25 and WWE 2K26 `.cak` extractor, reb
 
 - Public release: **v1.7.8**
 - Runtime version: **1.7.8**
-- Status: **Ready** for WWE 2K25 catalog/name recovery and extraction; **Experimental** for WWE 2K25 rebuilding until an in-game mount is confirmed; existing WWE 2K26 labels remain unchanged
+- Status: **Ready** for WWE 2K25 v1.23 catalog/name recovery, extraction, identity-preserving protected rebuild, and verified archive mount acceptance; visible changed-content override remains **Experimental**; existing WWE 2K26 labels remain unchanged
 
 Each public artifact keeps its own name, version, checksum, notes, bug report, and fix report. An older package is never silently replaced by a newer build.
 
