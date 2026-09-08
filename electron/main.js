@@ -15,6 +15,7 @@ const { createSecureLoaderManager } = require('./services/secure-loader-manager'
 const { createSecureLoaderReleaseService } = require('./services/secure-loader-release');
 const { createLoaderDiagnostics } = require('./services/loader-diagnostics');
 const { createCakCollisionService } = require('./services/cak-collision-service');
+const { validateBakeMeRoot } = require('./bakeme-validator');
 const { createModManifestManager } = require('./services/mod-manifest-manager');
 const secureDataCtrlLinkManifest = require('../app/data/compatibility/secure-datacrtllink.json');
 
@@ -1219,12 +1220,14 @@ ipcMain.handle('desktop:cak20-choose-game-folder', async () => {
 
 ipcMain.handle('desktop:repackager-choose-source', async () => {
   const result = await dialog.showOpenDialog({ title: 'Choose the BakeMe folder to package', properties: ['openDirectory'] });
-  return result.canceled || !result.filePaths.length ? { ok: false } : { ok: true, path: path.resolve(result.filePaths[0]) };
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  const validation = validateBakeMeRoot(result.filePaths[0]);
+  return { ok: true, path: validation.root, validation };
 });
 
 ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
   const source = path.resolve(String(sourceRoot || ''));
-  if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) throw new Error('Choose a readable BakeMe folder first.');
+  validateBakeMeRoot(source);
   const gameFolder = readToolConfig().gameFolder || '';
   const isWwe2K25 = Boolean(gameFolder && fs.existsSync(path.join(gameFolder, 'WWE2K25_x64.exe')));
   const result = await dialog.showSaveDialog({ title: 'Save the new CAK archive', defaultPath: path.basename(source).replace(/^bakeme(?:_|-)?/i, '') || 'AuroraForge-Mod', filters: [{ name: isWwe2K25 ? 'WWE 2K25 CAK archive' : 'WWE 2K26 CAK archive', extensions: ['cak'] }] });
