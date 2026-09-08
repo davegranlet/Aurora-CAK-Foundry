@@ -57,38 +57,4 @@ function auditBakeSource(sourcePath, maxDepth = MAX_DEPTH) {
   };
 }
 
-function prepareBakeMeCopy(sourcePath, destinationParent) {
-  const audit = auditBakeSource(sourcePath);
-  if (!audit.suggestedRoot)
-    throw new Error('Aurora Forge could not identify one safe game-relative root. Select the folder whose direct children are the real game folders, then inspect it again.');
-  const destination = path.resolve(String(destinationParent || ''), 'BakeMe');
-  if (destination === audit.suggestedRoot || destination.startsWith(audit.suggestedRoot + path.sep))
-    throw new Error('Choose an output folder outside the source mod folder.');
-  if (fs.existsSync(destination))
-    throw new Error(`Refusing to overwrite the existing BakeMe folder: ${destination}`);
-
-  let copiedFiles = 0; let copiedBytes = 0; const blocked = [];
-  function copyTree(from, to, depth) {
-    fs.mkdirSync(to, { recursive: true });
-    for (const entry of fs.readdirSync(from, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name))) {
-      const source = path.join(from, entry.name); const target = path.join(to, entry.name);
-      if (entry.isSymbolicLink()) { blocked.push(`${entry.name}: symbolic link`); continue; }
-      if (entry.isFile()) {
-        fs.copyFileSync(source, target); copiedFiles += 1; copiedBytes += fs.statSync(source).size;
-      } else if (entry.isDirectory()) {
-        if (depth >= audit.maxDepth) { blocked.push(`${path.relative(audit.suggestedRoot, source).replace(/\\/g, '/')}: beyond ${audit.maxDepth}-level limit`); continue; }
-        copyTree(source, target, depth + 1);
-      }
-    }
-  }
-  try {
-    copyTree(audit.suggestedRoot, destination, 0);
-    if (!copiedFiles) throw new Error('The selected game-relative root contains no copyable files within the depth limit.');
-    return { ...audit, sourceRoot: audit.suggestedRoot, destination, copiedFiles, copiedBytes, blocked };
-  } catch (error) {
-    fs.rmSync(destination, { recursive: true, force: true });
-    throw error;
-  }
-}
-
-module.exports = { MAX_DEPTH, auditBakeSource, prepareBakeMeCopy };
+module.exports = { MAX_DEPTH, auditBakeSource };
