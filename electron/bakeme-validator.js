@@ -22,16 +22,14 @@ function validateBakeMeRoot(sourcePath) {
   if (links.length) throw new Error(`Cannot bake this folder: symbolic links are not allowed (${links.join(', ')}). Copy the real files into the folder instead.`);
 
   const recognisedRoots = entries.filter((entry) => entry.isDirectory() && WWE2K25_ROOT_FOLDERS.has(entry.name.toLowerCase())).map((entry) => entry.name);
-  const unknownFolders = entries.filter((entry) => entry.isDirectory() && !WWE2K25_ROOT_FOLDERS.has(entry.name.toLowerCase())).map((entry) => entry.name);
   const unknownFiles = entries.filter((entry) => entry.isFile() && !ROOT_FILES.has(entry.name.toLowerCase())).map((entry) => entry.name);
   if (!recognisedRoots.length) {
     const found = entries.map((entry) => entry.name).slice(0, 8);
     const suffix = entries.length > found.length ? ', …' : '';
     throw new Error(`Cannot verify this BakeMe folder: its top level does not contain a WWE 2K25 game folder. Found: ${found.length ? found.join(', ') + suffix : '(empty folder)'}. Select or arrange the folder so it begins with a real game path such as Characters, Logo, Arena, or UI.`);
   }
-  if (unknownFolders.length || unknownFiles.length) {
-    const details = [...unknownFolders.map((name) => `folder “${name}”`), ...unknownFiles.map((name) => `file “${name}”`)].join(', ');
-    throw new Error(`Cannot verify this BakeMe folder: unrecognized item(s) at its top level: ${details}. Move wrapper folders, readme files, and mod-package files outside the BakeMe root; keep only real WWE 2K25 paths.`);
+  if (unknownFiles.length) {
+    throw new Error(`Cannot verify this BakeMe folder: unrecognized file(s) at its top level: ${unknownFiles.map((name) => `“${name}”`).join(', ')}. Move readme files, archives, and mod-package files outside the BakeMe root; keep only real WWE 2K25 paths.`);
   }
 
   let fileCount = 0;
