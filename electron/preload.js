@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   ,onCakExtractionProgress: (callback) => { const listener = (_event, payload) => callback(payload); ipcRenderer.on('desktop:cak-extraction-progress', listener); return () => ipcRenderer.removeListener('desktop:cak-extraction-progress', listener); }
   ,openCakOutput: () => ipcRenderer.invoke('desktop:cak-explorer-open-output')
   ,chooseRepackSource: () => ipcRenderer.invoke('desktop:repackager-choose-source')
+  ,auditRepackSource: () => ipcRenderer.invoke('desktop:repackager-audit-source')
   ,buildRepackPackage: (sourceRoot) => ipcRenderer.invoke('desktop:repackager-build', sourceRoot)
   ,verifyRepackPackage: () => ipcRenderer.invoke('desktop:repackager-verify')
   ,openRepackOutput: () => ipcRenderer.invoke('desktop:repackager-open-output')

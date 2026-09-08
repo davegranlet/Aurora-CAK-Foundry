@@ -15,6 +15,7 @@ const { createSecureLoaderManager } = require('./services/secure-loader-manager'
 const { createSecureLoaderReleaseService } = require('./services/secure-loader-release');
 const { createLoaderDiagnostics } = require('./services/loader-diagnostics');
 const { createCakCollisionService } = require('./services/cak-collision-service');
+const { auditBakeSource, MAX_DEPTH: BAKE_ME_AUDIT_MAX_DEPTH } = require('./bakeme-audit');
 const { createModManifestManager } = require('./services/mod-manifest-manager');
 const secureDataCtrlLinkManifest = require('../app/data/compatibility/secure-datacrtllink.json');
 
@@ -1220,6 +1221,12 @@ ipcMain.handle('desktop:cak20-choose-game-folder', async () => {
 ipcMain.handle('desktop:repackager-choose-source', async () => {
   const result = await dialog.showOpenDialog({ title: 'Choose the BakeMe folder to package', properties: ['openDirectory'] });
   return result.canceled || !result.filePaths.length ? { ok: false } : { ok: true, path: path.resolve(result.filePaths[0]) };
+});
+
+ipcMain.handle('desktop:repackager-audit-source', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose a mod folder to inspect', properties: ['openDirectory'] });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  return { ok: true, ...auditBakeSource(result.filePaths[0], BAKE_ME_AUDIT_MAX_DEPTH) };
 });
 
 ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
