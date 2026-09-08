@@ -34,6 +34,7 @@ let lastBuiltCakPath = '';
 let lastBuiltCakSource = '';
 let lastBuiltCakProfile = '';
 let currentCakSession = null;
+let gameCatalogPathCache = null;
 let lastCakOutputDir = '';
 let currentPac19Archive = '';
 let lastPac19OutputDir = '';
@@ -255,6 +256,39 @@ function openSupportedCak(archivePath, dictionary = {}) {
   return cakV93.isV93Archive(archivePath)
     ? cakV93.openArchive(archivePath, cakV93ToolPath())
     : cakReader.openArchive(archivePath, dictionary);
+}
+
+function configuredGameCatalogPaths() {
+  const gameFolder = readToolConfig().gameFolder || '';
+  if (!gameFolder || !fs.existsSync(gameFolder) || !fs.statSync(gameFolder).isDirectory()) {
+    throw new Error('Choose the WWE game folder at the top of Foundry first. Foundry needs its original CAKs to verify mod-file paths.');
+  }
+  const archivePaths = fs.readdirSync(gameFolder, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^bakedfile\d+\.cak$/i.test(entry.name))
+    .map((entry) => path.join(gameFolder, entry.name))
+    .sort((left, right) => path.basename(left).localeCompare(path.basename(right), undefined, { numeric: true }));
+  if (!archivePaths.length) throw new Error('No bakedfile*.cak archives were found in the configured game folder.');
+  const cacheKey = archivePaths.map((archivePath) => {
+    const stat = fs.statSync(archivePath);
+    return `${archivePath.toLowerCase()}:${stat.size}:${stat.mtimeMs}`;
+  }).join('|');
+  if (gameCatalogPathCache && gameCatalogPathCache.key === cacheKey) return gameCatalogPathCache.paths;
+
+  const v99Archives = archivePaths.filter((archivePath) => !cakV93.isV93Archive(archivePath));
+  const dictionary = v99Archives.length ? cakReader.buildNativeDictionary(v99Archives) : {};
+  const paths = new Set();
+  for (const archivePath of archivePaths) {
+    let session;
+    try { session = openSupportedCak(archivePath, dictionary); }
+    catch (error) { throw new Error(`Cannot read WWE game catalog from ${path.basename(archivePath)}: ${error.message}`); }
+    for (const file of session.files) {
+      if (file.nameResolved === false || !file.name) continue;
+      paths.add(String(file.name).replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase());
+    }
+  }
+  if (!paths.size) throw new Error('The configured WWE game CAKs did not provide any verified file paths.');
+  gameCatalogPathCache = { key: cacheKey, paths };
+  return paths;
 }
 
 function pac19HelperPath() {
@@ -1221,13 +1255,13 @@ ipcMain.handle('desktop:cak20-choose-game-folder', async () => {
 ipcMain.handle('desktop:repackager-choose-source', async () => {
   const result = await dialog.showOpenDialog({ title: 'Choose the BakeMe folder to package', properties: ['openDirectory'] });
   if (result.canceled || !result.filePaths.length) return { ok: false };
-  const validation = validateBakeMeRoot(result.filePaths[0]);
+  const validation = validateBakeMeRoot(result.filePaths[0], configuredGameCatalogPaths());
   return { ok: true, path: validation.root, validation };
 });
 
 ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
   const source = path.resolve(String(sourceRoot || ''));
-  validateBakeMeRoot(source);
+  validateBakeMeRoot(source, configuredGameCatalogPaths());
   const gameFolder = readToolConfig().gameFolder || '';
   const isWwe2K25 = Boolean(gameFolder && fs.existsSync(path.join(gameFolder, 'WWE2K25_x64.exe')));
   const result = await dialog.showSaveDialog({ title: 'Save the new CAK archive', defaultPath: path.basename(source).replace(/^bakeme(?:_|-)?/i, '') || 'AuroraForge-Mod', filters: [{ name: isWwe2K25 ? 'WWE 2K25 CAK archive' : 'WWE 2K26 CAK archive', extensions: ['cak'] }] });
