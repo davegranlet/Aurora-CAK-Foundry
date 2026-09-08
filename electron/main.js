@@ -15,7 +15,7 @@ const { createSecureLoaderManager } = require('./services/secure-loader-manager'
 const { createSecureLoaderReleaseService } = require('./services/secure-loader-release');
 const { createLoaderDiagnostics } = require('./services/loader-diagnostics');
 const { createCakCollisionService } = require('./services/cak-collision-service');
-const { auditBakeSource, MAX_DEPTH: BAKE_ME_AUDIT_MAX_DEPTH } = require('./bakeme-audit');
+const { auditBakeSource, prepareBakeMeCopy, MAX_DEPTH: BAKE_ME_AUDIT_MAX_DEPTH } = require('./bakeme-audit');
 const { createModManifestManager } = require('./services/mod-manifest-manager');
 const secureDataCtrlLinkManifest = require('../app/data/compatibility/secure-datacrtllink.json');
 
@@ -1227,6 +1227,14 @@ ipcMain.handle('desktop:repackager-audit-source', async () => {
   const result = await dialog.showOpenDialog({ title: 'Choose a mod folder to inspect', properties: ['openDirectory'] });
   if (result.canceled || !result.filePaths.length) return { ok: false };
   return { ok: true, ...auditBakeSource(result.filePaths[0], BAKE_ME_AUDIT_MAX_DEPTH) };
+});
+
+ipcMain.handle('desktop:repackager-prepare-bakeme', async (_event, sourceRoot) => {
+  const audit = auditBakeSource(sourceRoot, BAKE_ME_AUDIT_MAX_DEPTH);
+  if (!audit.suggestedRoot) throw new Error('Inspect a folder with exactly one recognizable game-root layout before creating a BakeMe copy.');
+  const result = await dialog.showOpenDialog({ title: 'Choose where to create the clean BakeMe folder', properties: ['openDirectory', 'createDirectory'] });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  return { ok: true, ...prepareBakeMeCopy(sourceRoot, result.filePaths[0]) };
 });
 
 ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
