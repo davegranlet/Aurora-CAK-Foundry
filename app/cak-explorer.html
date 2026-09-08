@@ -96,8 +96,6 @@
         <p>Extract files above, edit them without changing their relative paths, then choose that output folder here. Aurora Forge uses the selected game's FDIR profile when rebuilding.</p>
         <p>WWE 2K26 uses the selected output filename when deriving its v9.9 archive key, so do not rename a finished 2K26 CAK. WWE 2K25 uses its separate v9.3 build profile.</p>
         <p>A supplied <code>_textures.tdb</code> is preserved for raw WWE 2K25 rebuilds. WWE 2K26 retains its existing version-6 texture-database handling.</p>
-        <div class="cak-path-row"><code id="repackAuditPath">Optional: inspect a messy mod folder before choosing the final BakeMe folder.</code><button id="repackAuditSource" class="ai-btn secondary" type="button">Inspect Mod Folder</button></div>
-        <p id="repackAuditMessage" class="cak-message" role="status"></p>
         <div class="cak-path-row"><code id="repackSourcePath">No BakeMe folder selected.</code><button id="repackChooseSource" class="ai-btn secondary" type="button">Choose BakeMe Folder</button></div>
         <div class="ai-actions"><button id="repackBuild" class="ai-btn" type="button" disabled>Build Game-Ready CAK</button><button id="repackVerify" class="ai-btn secondary" type="button" disabled>Verify Every Payload</button><button id="repackOpenOutput" class="ai-btn secondary" type="button" disabled>Open Output Folder</button></div>
         <p class="cak-message">The source folder stays unchanged. The rebuild uses hashed virtual paths, protected payloads, FDIR v9 metadata, and independent byte-for-byte recovery checks.</p>
