@@ -77,20 +77,41 @@ function sha256(filePath) {
   return hash.digest('hex');
 }
 
+function archiveRelativePath(sourceRelative) {
+  return sourceRelative.toLowerCase().endsWith('.dds')
+    ? sourceRelative.slice(0, -4) + '.tex'
+    : sourceRelative;
+}
+
 function verifyCak(archivePath, sourceRoot, toolPath, oodlePath) {
   const catalog = openArchive(archivePath, toolPath);
   const expected = walk(path.resolve(sourceRoot));
+  const sourceHasTextureDatabase = expected.some((file) => file.relative.toLowerCase() === '_textures.tdb');
+  const sourceHasDds = expected.some((file) => file.relative.toLowerCase().endsWith('.dds'));
+  const generatedTextureDatabases = catalog.files.filter((file) => String(file.name).toLowerCase() === '_textures.tdb');
+  if (generatedTextureDatabases.length !== (sourceHasDds && !sourceHasTextureDatabase ? 1 : 0)) {
+    throw new Error(`FDIR 9.3 rebuild produced an unexpected _textures.tdb count: ${generatedTextureDatabases.length}.`);
+  }
+  const expectedArchiveFiles = expected.length + generatedTextureDatabases.length;
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'aurora-v93-verify-'));
   try {
     extractAll(archivePath, temporary, toolPath, oodlePath);
     const actual = walk(temporary);
-    if (catalog.files.length !== expected.length || actual.length !== expected.length) throw new Error(`FDIR 9.3 rebuild count mismatch: source ${expected.length}, catalog ${catalog.files.length}, reopened ${actual.length}.`);
-    for (const file of expected) {
-      const recovered = path.join(temporary, ...file.relative.split('/'));
-      if (!fs.existsSync(recovered)) throw new Error(`FDIR 9.3 rebuild omitted ${file.relative}.`);
-      if (fs.statSync(file.full).size !== fs.statSync(recovered).size || sha256(file.full) !== sha256(recovered)) throw new Error(`FDIR 9.3 byte verification failed for ${file.relative}.`);
+    if (catalog.files.length !== expectedArchiveFiles || actual.length !== expectedArchiveFiles) throw new Error(`FDIR 9.3 rebuild count mismatch: source ${expected.length}, generated metadata ${generatedTextureDatabases.length}, catalog ${catalog.files.length}, reopened ${actual.length}.`);
+    if (generatedTextureDatabases.length && !actual.some((file) => file.relative.toLowerCase() === '_textures.tdb')) {
+      throw new Error('FDIR 9.3 rebuild omitted generated _textures.tdb during reopen verification.');
     }
-    return { verified: true, payloadVerified: true, fileCount: expected.length, folderCount: catalog.folders.length, bytes: fs.statSync(archivePath).size, gameCompatibilityProfile: 'WWE 2K25 FDIR 9.3 (Experimental until in-game mount confirmation)' };
+    for (const file of expected) {
+      const recovered = path.join(temporary, ...archiveRelativePath(file.relative).split('/'));
+      if (!fs.existsSync(recovered)) throw new Error(`FDIR 9.3 rebuild omitted ${file.relative}.`);
+      if (file.relative.toLowerCase().endsWith('.dds')) {
+        if (fs.statSync(recovered).size === 0) throw new Error(`FDIR 9.3 converted texture is empty: ${file.relative}.`);
+      } else if (fs.statSync(file.full).size !== fs.statSync(recovered).size || sha256(file.full) !== sha256(recovered)) {
+        throw new Error(`FDIR 9.3 byte verification failed for ${file.relative}.`);
+      }
+    }
+    const convertedTextureCount = expected.filter((file) => file.relative.toLowerCase().endsWith('.dds')).length;
+    return { verified: true, payloadVerified: true, fileCount: catalog.files.length, sourceFileCount: expected.length, convertedTextureCount, folderCount: catalog.folders.length, bytes: fs.statSync(archivePath).size, gameCompatibilityProfile: 'WWE 2K25 FDIR 9.3 (Experimental until in-game mount confirmation)' };
   } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
 }
 

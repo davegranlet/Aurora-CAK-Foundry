@@ -15,8 +15,12 @@ const { createSecureLoaderManager } = require('./services/secure-loader-manager'
 const { createSecureLoaderReleaseService } = require('./services/secure-loader-release');
 const { createLoaderDiagnostics } = require('./services/loader-diagnostics');
 const { createCakCollisionService } = require('./services/cak-collision-service');
+const { createWwe2k25ModManager } = require('./services/wwe2k25-mod-manager');
+const { createWwe2k25LoaderManager } = require('./services/wwe2k25-loader-manager');
+const { validateBakeMeRoot } = require('./bakeme-validator');
 const { createModManifestManager } = require('./services/mod-manifest-manager');
 const secureDataCtrlLinkManifest = require('../app/data/compatibility/secure-datacrtllink.json');
+const wwe2k25LoaderManifest = require('../app/data/compatibility/wwe2k25-cak-loader.json');
 
 const APP_ROOT = path.join(__dirname, '..', 'app');
 const START_PAGE = process.env.AURORA_START_PAGE || 'index.html';
@@ -33,6 +37,7 @@ let lastBuiltCakPath = '';
 let lastBuiltCakSource = '';
 let lastBuiltCakProfile = '';
 let currentCakSession = null;
+let gameCatalogPathCache = null;
 let lastCakOutputDir = '';
 let currentPac19Archive = '';
 let lastPac19OutputDir = '';
@@ -135,6 +140,14 @@ function isWwe2K26Running() {
   } catch (_error) { return true; }
 }
 
+function isWwe2K25Running() {
+  if (process.platform !== 'win32') return false;
+  try {
+    const result = cp.spawnSync('tasklist.exe', ['/FI', 'IMAGENAME eq WWE2K25_x64.exe', '/NH', '/FO', 'CSV'], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
+    return result.status === 0 && /WWE2K25_x64\.exe/i.test(String(result.stdout || ''));
+  } catch (_error) { return true; }
+}
+
 function workshopServices() {
   if (workshopServiceCache) return workshopServiceCache;
   const registry = createGameInstallRegistry(path.join(app.getPath('userData'), 'aurora-workshop.json'));
@@ -145,7 +158,10 @@ function workshopServices() {
   const diagnostics = createLoaderDiagnostics({ installRegistry: registry });
   const collisions = createCakCollisionService({ installRegistry: registry, openArchive: cakReader.openArchive, readDictionary: readCakDictionary });
   const modManifest = createModManifestManager({ installRegistry: registry, journal, isGameRunning: isWwe2K26Running });
-  workshopServiceCache = { registry, journal, capabilities, loader, releases, diagnostics, collisions, modManifest };
+  const wwe2k25Mods = createWwe2k25ModManager({ gameFolder: () => readToolConfig().gameFolder || '', isGameRunning: isWwe2K25Running, openArchive: (archivePath) => openSupportedCak(archivePath), journal });
+  const wwe2k25ReleaseRoot = app.isPackaged ? path.join(process.resourcesPath, 'loader-releases', 'wwe2k25-v123') : path.join(APP_ROOT, 'data', 'loader-releases', 'wwe2k25-v123');
+  const wwe2k25Loader = createWwe2k25LoaderManager({ gameFolder: () => readToolConfig().gameFolder || '', isGameRunning: isWwe2K25Running, journal, manifest: wwe2k25LoaderManifest, releaseRoot: wwe2k25ReleaseRoot });
+  workshopServiceCache = { registry, journal, capabilities, loader, releases, diagnostics, collisions, modManifest, wwe2k25Mods, wwe2k25Loader };
   return workshopServiceCache;
 }
 
@@ -254,6 +270,39 @@ function openSupportedCak(archivePath, dictionary = {}) {
   return cakV93.isV93Archive(archivePath)
     ? cakV93.openArchive(archivePath, cakV93ToolPath())
     : cakReader.openArchive(archivePath, dictionary);
+}
+
+function configuredGameCatalogPaths() {
+  const gameFolder = readToolConfig().gameFolder || '';
+  if (!gameFolder || !fs.existsSync(gameFolder) || !fs.statSync(gameFolder).isDirectory()) {
+    throw new Error('Choose the WWE game folder at the top of Foundry first. Foundry needs its original CAKs to verify mod-file paths.');
+  }
+  const archivePaths = fs.readdirSync(gameFolder, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^bakedfile\d+\.cak$/i.test(entry.name))
+    .map((entry) => path.join(gameFolder, entry.name))
+    .sort((left, right) => path.basename(left).localeCompare(path.basename(right), undefined, { numeric: true }));
+  if (!archivePaths.length) throw new Error('No bakedfile*.cak archives were found in the configured game folder.');
+  const cacheKey = archivePaths.map((archivePath) => {
+    const stat = fs.statSync(archivePath);
+    return `${archivePath.toLowerCase()}:${stat.size}:${stat.mtimeMs}`;
+  }).join('|');
+  if (gameCatalogPathCache && gameCatalogPathCache.key === cacheKey) return gameCatalogPathCache.paths;
+
+  const v99Archives = archivePaths.filter((archivePath) => !cakV93.isV93Archive(archivePath));
+  const dictionary = v99Archives.length ? cakReader.buildNativeDictionary(v99Archives) : {};
+  const paths = new Set();
+  for (const archivePath of archivePaths) {
+    let session;
+    try { session = openSupportedCak(archivePath, dictionary); }
+    catch (error) { throw new Error(`Cannot read WWE game catalog from ${path.basename(archivePath)}: ${error.message}`); }
+    for (const file of session.files) {
+      if (file.nameResolved === false || !file.name) continue;
+      paths.add(String(file.name).replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase());
+    }
+  }
+  if (!paths.size) throw new Error('The configured WWE game CAKs did not provide any verified file paths.');
+  gameCatalogPathCache = { key: cacheKey, paths };
+  return paths;
 }
 
 function pac19HelperPath() {
@@ -1219,17 +1268,20 @@ ipcMain.handle('desktop:cak20-choose-game-folder', async () => {
 
 ipcMain.handle('desktop:repackager-choose-source', async () => {
   const result = await dialog.showOpenDialog({ title: 'Choose the BakeMe folder to package', properties: ['openDirectory'] });
-  return result.canceled || !result.filePaths.length ? { ok: false } : { ok: true, path: path.resolve(result.filePaths[0]) };
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  const validation = validateBakeMeRoot(result.filePaths[0], configuredGameCatalogPaths());
+  return { ok: true, path: validation.root, validation };
 });
 
 ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
   const source = path.resolve(String(sourceRoot || ''));
-  if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) throw new Error('Choose a readable BakeMe folder first.');
+  validateBakeMeRoot(source, configuredGameCatalogPaths());
   const gameFolder = readToolConfig().gameFolder || '';
   const isWwe2K25 = Boolean(gameFolder && fs.existsSync(path.join(gameFolder, 'WWE2K25_x64.exe')));
   const result = await dialog.showSaveDialog({ title: 'Save the new CAK archive', defaultPath: path.basename(source).replace(/^bakeme(?:_|-)?/i, '') || 'AuroraForge-Mod', filters: [{ name: isWwe2K25 ? 'WWE 2K25 CAK archive' : 'WWE 2K26 CAK archive', extensions: ['cak'] }] });
   if (result.canceled || !result.filePath) return { ok: false };
   const outputPath = result.filePath.endsWith('.cak') ? result.filePath : result.filePath + '.cak';
+  if (isPathInside(outputPath, source)) throw new Error('Save the new CAK outside the BakeMe folder. An output placed inside its own source folder would be treated as another mod file during verification.');
   let built;
   if (isWwe2K25) {
     cakV93.buildCak(source, outputPath, cakV93ToolPath(), resolveOodlePath());
@@ -1618,3 +1670,8 @@ ipcMain.handle('desktop:workshop-loader-diagnostics', async () => workshopServic
 ipcMain.handle('desktop:workshop-cak-collisions', async () => workshopServices().collisions.scan());
 ipcMain.handle('desktop:workshop-mod-manifest', async () => workshopServices().modManifest.read());
 ipcMain.handle('desktop:workshop-save-mod-manifest', async (_event, request) => workshopServices().modManifest.save(request));
+ipcMain.handle('desktop:wwe2k25-mod-manager-status', async () => workshopServices().wwe2k25Mods.status());
+ipcMain.handle('desktop:wwe2k25-mod-manager-sync', async (_event, request) => workshopServices().wwe2k25Mods.sync(request));
+ipcMain.handle('desktop:wwe2k25-loader-status', async () => workshopServices().wwe2k25Loader.status());
+ipcMain.handle('desktop:wwe2k25-loader-enable', async () => workshopServices().wwe2k25Loader.enable());
+ipcMain.handle('desktop:wwe2k25-loader-restore', async (_event, operationId) => workshopServices().wwe2k25Loader.restore(operationId));

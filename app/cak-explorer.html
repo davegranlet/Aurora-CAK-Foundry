@@ -102,6 +102,23 @@
         <p id="repackMessage" class="cak-message" role="status"></p>
       </section>
 
+      <section class="ai-panel app-panel" id="wwe2k25-mod-manager">
+        <div class="section-label" style="margin-top:0;">WWE 2K25 Mod Manager</div>
+        <h2>Choose which CAKs are enabled</h2>
+        <p>Foundry reads the <code>mods</code> folder in your selected game installation. Check the CAKs you want enabled, then sync once. Foundry checks exact file-path conflicts before changing <code>mods\manifest.json</code>.</p>
+        <div class="ai-actions"><button id="modManagerRefresh" class="ai-btn secondary" type="button">Refresh Mod List</button><button id="modManagerSync" class="ai-btn" type="button" disabled>Sync Enabled Mods</button></div>
+        <div id="modManagerList" class="cak-table-shell" hidden><table class="cak-table"><thead><tr><th>Enabled</th><th>CAK file</th><th>Load order</th><th>Order</th></tr></thead><tbody id="modManagerRows"></tbody></table></div>
+        <p id="modManagerMessage" class="cak-message" role="status">Choose your WWE 2K25 game folder above, then refresh the mod list.</p>
+      </section>
+
+      <section class="ai-panel app-panel" id="wwe2k25-loader-manager">
+        <div class="section-label" style="margin-top:0;">WWE 2K25 CAK Loader</div>
+        <h2>Check, enable, or restore the loader</h2>
+        <p>This is separate from baking and from choosing mods. Foundry supports only the reviewed WWE 2K25 v1.23 build, checks every loader-file checksum, and backs up existing loader control files before an explicit enable. It never copies or enables a mod CAK.</p>
+        <div class="ai-actions"><button id="loaderManagerRefresh" class="ai-btn secondary" type="button">Check Loader Status</button><button id="loaderManagerEnable" class="ai-btn" type="button" disabled>Enable CAK Loader</button><button id="loaderManagerRestore" class="ai-btn secondary" type="button" disabled>Restore My Previous Loader</button></div>
+        <p id="loaderManagerMessage" class="cak-message" role="status">Check the loader status before making any change.</p>
+      </section>
+
       <section class="ai-panel warn-panel app-panel">
         <div class="section-label" style="margin-top:0;">Important</div>
         <h2>Original game archives remain read-only</h2>
