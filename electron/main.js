@@ -1267,6 +1267,7 @@ ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
   const result = await dialog.showSaveDialog({ title: 'Save the new CAK archive', defaultPath: path.basename(source).replace(/^bakeme(?:_|-)?/i, '') || 'AuroraForge-Mod', filters: [{ name: isWwe2K25 ? 'WWE 2K25 CAK archive' : 'WWE 2K26 CAK archive', extensions: ['cak'] }] });
   if (result.canceled || !result.filePath) return { ok: false };
   const outputPath = result.filePath.endsWith('.cak') ? result.filePath : result.filePath + '.cak';
+  if (isPathInside(outputPath, source)) throw new Error('Save the new CAK outside the BakeMe folder. An output placed inside its own source folder would be treated as another mod file during verification.');
   let built;
   if (isWwe2K25) {
     cakV93.buildCak(source, outputPath, cakV93ToolPath(), resolveOodlePath());
