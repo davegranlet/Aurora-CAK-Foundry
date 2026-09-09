@@ -1,0 +1,11 @@
+{
+  "schema": "aurora-forge-wwe2k25-cak-loader-v1",
+  "loaderVersion": "1.0.0",
+  "hostExecutable": "WWE2K25_x64.exe",
+  "gameExeSha256": "B608E7ED18BFB6291CA195532ACCF40081CBF1A1F4850E63943906D155B9AC98",
+  "coreFilename": "dinput8.dll",
+  "coreSha256": "FC0771822612DC5F05A446BBE27DBB24A7ADF6D9072802C9D9F181D4088B1D82",
+  "addonFilename": "AuroraForge.CAKModLoader.ftrib",
+  "addonSha256": "84089A2CE223E08F9FDBB4D9F4742D2A4829A9615501347968B25F279E5661DB",
+  "notes": "Only the reviewed WWE 2K25 v1.23 executable profile is supported. Other builds remain blocked; there is no force-enable option."
+}

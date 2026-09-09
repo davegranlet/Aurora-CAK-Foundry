@@ -16,9 +16,11 @@ const { createSecureLoaderReleaseService } = require('./services/secure-loader-r
 const { createLoaderDiagnostics } = require('./services/loader-diagnostics');
 const { createCakCollisionService } = require('./services/cak-collision-service');
 const { createWwe2k25ModManager } = require('./services/wwe2k25-mod-manager');
+const { createWwe2k25LoaderManager } = require('./services/wwe2k25-loader-manager');
 const { validateBakeMeRoot } = require('./bakeme-validator');
 const { createModManifestManager } = require('./services/mod-manifest-manager');
 const secureDataCtrlLinkManifest = require('../app/data/compatibility/secure-datacrtllink.json');
+const wwe2k25LoaderManifest = require('../app/data/compatibility/wwe2k25-cak-loader.json');
 
 const APP_ROOT = path.join(__dirname, '..', 'app');
 const START_PAGE = process.env.AURORA_START_PAGE || 'index.html';
@@ -157,7 +159,8 @@ function workshopServices() {
   const collisions = createCakCollisionService({ installRegistry: registry, openArchive: cakReader.openArchive, readDictionary: readCakDictionary });
   const modManifest = createModManifestManager({ installRegistry: registry, journal, isGameRunning: isWwe2K26Running });
   const wwe2k25Mods = createWwe2k25ModManager({ gameFolder: () => readToolConfig().gameFolder || '', isGameRunning: isWwe2K25Running, openArchive: (archivePath) => openSupportedCak(archivePath), journal });
-  workshopServiceCache = { registry, journal, capabilities, loader, releases, diagnostics, collisions, modManifest, wwe2k25Mods };
+  const wwe2k25Loader = createWwe2k25LoaderManager({ gameFolder: () => readToolConfig().gameFolder || '', isGameRunning: isWwe2K25Running, journal, manifest: wwe2k25LoaderManifest, releaseRoot: path.join(APP_ROOT, 'data', 'loader-releases', 'wwe2k25-v123') });
+  workshopServiceCache = { registry, journal, capabilities, loader, releases, diagnostics, collisions, modManifest, wwe2k25Mods, wwe2k25Loader };
   return workshopServiceCache;
 }
 
@@ -1668,3 +1671,6 @@ ipcMain.handle('desktop:workshop-mod-manifest', async () => workshopServices().m
 ipcMain.handle('desktop:workshop-save-mod-manifest', async (_event, request) => workshopServices().modManifest.save(request));
 ipcMain.handle('desktop:wwe2k25-mod-manager-status', async () => workshopServices().wwe2k25Mods.status());
 ipcMain.handle('desktop:wwe2k25-mod-manager-sync', async (_event, request) => workshopServices().wwe2k25Mods.sync(request));
+ipcMain.handle('desktop:wwe2k25-loader-status', async () => workshopServices().wwe2k25Loader.status());
+ipcMain.handle('desktop:wwe2k25-loader-enable', async () => workshopServices().wwe2k25Loader.enable());
+ipcMain.handle('desktop:wwe2k25-loader-restore', async (_event, operationId) => workshopServices().wwe2k25Loader.restore(operationId));

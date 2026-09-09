@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const api = window.WWE2K26Desktop;
-  const state = { archivePath: '', outputPath: '', repackSource: '', page: 0, pages: 1, pageSize: 100, query: '', type: '', scope: 'resolved', items: [], selected: new Set(), selectableIds: null, selectableTotal: 0, managedCaks: [] };
+  const state = { archivePath: '', outputPath: '', repackSource: '', page: 0, pages: 1, pageSize: 100, query: '', type: '', scope: 'resolved', items: [], selected: new Set(), selectableIds: null, selectableTotal: 0, managedCaks: [], loaderOperationId: '' };
   const byId = (id) => document.getElementById(id);
   const parentFolder = (name) => { const normalized = String(name || '').replace(/\\/g, '/'); const split = normalized.lastIndexOf('/'); return split > 0 ? normalized.slice(0, split) : 'Archive root'; };
   const formatBytes = (value) => {
@@ -45,6 +45,17 @@
   async function refreshModManager() {
     try { message('modManagerMessage', 'Reading the WWE 2K25 mods folder...', 'working'); renderModManager(await api.getWwe2k25ModManager()); }
     catch (error) { byId('modManagerSync').disabled = true; message('modManagerMessage', error.message, 'bad'); }
+  }
+  function renderLoaderManager(status, operationId) {
+    state.loaderOperationId = operationId || status.restorableOperationId || '';
+    const details = `Game build: ${status.executableSupported ? 'supported' : 'not supported'} · Core: ${status.coreReady ? 'verified' : 'missing or different'} · CAK add-on: ${status.addonReady ? 'verified' : 'missing or different'} · Add-on enabled: ${status.addonEnabled ? 'yes' : 'no'}.`;
+    byId('loaderManagerEnable').disabled = Boolean(status.ready);
+    byId('loaderManagerRestore').disabled = !state.loaderOperationId;
+    message('loaderManagerMessage', status.ready ? `CAK Loader is ready. ${details}` : `${details} ${status.note}`, status.ready ? 'good' : 'working');
+  }
+  async function refreshLoaderManager() {
+    try { message('loaderManagerMessage', 'Checking the supported game build and loader files...', 'working'); renderLoaderManager(await api.getWwe2k25Loader()); }
+    catch (error) { byId('loaderManagerEnable').disabled = true; message('loaderManagerMessage', error.message, 'bad'); }
   }
   function renderRows(result) {
     state.items = result.items || [];
@@ -222,6 +233,19 @@
     try { const result = await api.syncWwe2k25Mods({ cakOrder }); renderModManager(result); message('modManagerMessage', `Enabled-mod manifest saved. ${result.enabled} CAK(s) are active for the next game launch.`, 'good'); }
     catch (error) { message('modManagerMessage', error.message, 'bad'); }
     finally { byId('modManagerSync').disabled = !state.managedCaks.length; }
+  });
+  byId('loaderManagerRefresh').addEventListener('click', refreshLoaderManager);
+  byId('loaderManagerEnable').addEventListener('click', async () => {
+    if (!window.confirm('Enable the verified WWE 2K25 CAK Loader?\n\nFoundry will back up your existing dinput8.dll, CAK add-on, and plugins/addons.txt first. It will not add or enable any mod CAK.')) return;
+    byId('loaderManagerEnable').disabled = true; message('loaderManagerMessage', 'Backing up existing loader files and verifying the supported release...', 'working');
+    try { const result = await api.enableWwe2k25Loader(); renderLoaderManager(result, result.operation && result.operation.id); message('loaderManagerMessage', 'CAK Loader enabled and every installed file verified. Your mod choices were not changed.', 'good'); }
+    catch (error) { message('loaderManagerMessage', error.message, 'bad'); }
+  });
+  byId('loaderManagerRestore').addEventListener('click', async () => {
+    if (!state.loaderOperationId || !window.confirm('Restore the loader files Foundry backed up during its last enable action? Mod CAKs and the mod manifest will not be changed.')) return;
+    byId('loaderManagerRestore').disabled = true; message('loaderManagerMessage', 'Restoring the backed-up loader files...', 'working');
+    try { const result = await api.restoreWwe2k25Loader(state.loaderOperationId); state.loaderOperationId = ''; renderLoaderManager(result); message('loaderManagerMessage', 'Your previous loader files were restored. Mod CAKs and the manifest were not changed.', 'good'); }
+    catch (error) { message('loaderManagerMessage', error.message, 'bad'); }
   });
   initialize();
 }());
