@@ -35,7 +35,14 @@ function createWwe2k25ModManager({ gameFolder, isGameRunning, openArchive, journ
     const manifest = readManifest(value.manifest);
     const byKey = new Map(available.map((name) => [name.toLowerCase(), name]));
     const enabled = manifest.order.map((name) => byKey.get(String(name).toLowerCase())).filter(Boolean);
-    return { game: value.game, manifestPresent: manifest.present, caks: available.map((name) => ({ name, enabled: enabled.some((item) => item.toLowerCase() === name.toLowerCase()), order: enabled.findIndex((item) => item.toLowerCase() === name.toLowerCase()) })) };
+    const rows = available.map((name) => ({ name, enabled: enabled.some((item) => item.toLowerCase() === name.toLowerCase()), order: enabled.findIndex((item) => item.toLowerCase() === name.toLowerCase()) }));
+    rows.sort((left, right) => {
+      if (left.enabled && right.enabled) return left.order - right.order;
+      if (left.enabled) return -1;
+      if (right.enabled) return 1;
+      return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' });
+    });
+    return { game: value.game, manifestPresent: manifest.present, caks: rows };
   }
 
   function sync(request) {

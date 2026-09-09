@@ -32,10 +32,27 @@
     const rows = state.managedCaks.map((cak) => {
       const row = document.createElement('tr');
       const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.checked = Boolean(cak.enabled); enabled.dataset.cakName = cak.name;
+      enabled.addEventListener('change', () => {
+        const next = state.managedCaks.filter((item) => item.name !== cak.name);
+        if (enabled.checked) next.splice(next.filter((item) => item.enabled).length, 0, { ...cak, enabled: true, order: 0 });
+        else next.push({ ...cak, enabled: false, order: -1 });
+        renderModManager({ ...status, caks: next });
+      });
       const enabledCell = document.createElement('td'); enabledCell.appendChild(enabled);
       const nameCell = document.createElement('td'); nameCell.textContent = cak.name;
       const orderCell = document.createElement('td'); orderCell.textContent = cak.enabled ? String(Number(cak.order) + 1) : '—';
-      row.append(enabledCell, nameCell, orderCell); return row;
+      const controlsCell = document.createElement('td');
+      const up = document.createElement('button'); up.type = 'button'; up.className = 'ai-btn secondary'; up.textContent = 'Up'; up.disabled = !cak.enabled || cak.order <= 0;
+      const down = document.createElement('button'); down.type = 'button'; down.className = 'ai-btn secondary'; down.textContent = 'Down'; down.disabled = !cak.enabled || cak.order >= state.managedCaks.filter((item) => item.enabled).length - 1;
+      const move = (delta) => {
+        const enabledRows = state.managedCaks.filter((item) => item.enabled); const index = enabledRows.findIndex((item) => item.name === cak.name); const swap = index + delta;
+        if (swap < 0 || swap >= enabledRows.length) return;
+        [enabledRows[index], enabledRows[swap]] = [enabledRows[swap], enabledRows[index]];
+        const disabledRows = state.managedCaks.filter((item) => !item.enabled);
+        renderModManager({ ...status, caks: [...enabledRows.map((item, order) => ({ ...item, order })), ...disabledRows] });
+      };
+      up.addEventListener('click', () => move(-1)); down.addEventListener('click', () => move(1)); controlsCell.append(up, document.createTextNode(' '), down);
+      row.append(enabledCell, nameCell, orderCell, controlsCell); return row;
     });
     byId('modManagerRows').replaceChildren(...rows);
     byId('modManagerList').hidden = !state.managedCaks.length;
