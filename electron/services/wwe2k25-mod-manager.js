@@ -59,7 +59,9 @@ function createWwe2k25ModManager({ gameFolder, isGameRunning, openArchive, journ
         const virtualPath = String(file.name || '').replace(/\\/g, '/');
         if (!virtualPath) continue;
         const key = virtualPath.toLowerCase();
-        if (owners.has(key)) throw new Error(`Cannot enable these CAKs: “${name}” and “${owners.get(key).archive}” both replace “${owners.get(key).path}”.`);
+        // An archive can legitimately carry a duplicate catalog record. Only a
+        // replacement owned by a *different* selected CAK is a mod conflict.
+        if (owners.has(key) && owners.get(key).archive !== name) throw new Error(`Cannot enable these CAKs: “${name}” and “${owners.get(key).archive}” both replace “${owners.get(key).path}”.`);
         owners.set(key, { archive: name, path: virtualPath });
       }
     }
