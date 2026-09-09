@@ -7,5 +7,17 @@
   "coreSha256": "FC0771822612DC5F05A446BBE27DBB24A7ADF6D9072802C9D9F181D4088B1D82",
   "addonFilename": "AuroraForge.CAKModLoader.ftrib",
   "addonSha256": "84089A2CE223E08F9FDBB4D9F4742D2A4829A9615501347968B25F279E5661DB",
-  "notes": "Only the reviewed WWE 2K25 v1.23 executable profile is supported. Other builds remain blocked; there is no force-enable option."
+  "notes": "Only reviewed native loader profiles can be enabled. Foundry CAK catalog browsing, BakeMe validation, baking, and manifest editing are independent of this native-loader gate.",
+  "observedBuilds": [
+    {
+      "sha256": "B608E7ED18BFB6291CA195532ACCF40081CBF1A1F4850E63943906D155B9AC98",
+      "label": "WWE 2K25 v1.23",
+      "loaderStatus": "supported"
+    },
+    {
+      "sha256": "C6BC0459D4D29667C9E8F1DCACA013AE4691D615E4C79D069AD272F70E2CEE01",
+      "label": "Saturday Night's Main Event complete-game build",
+      "loaderStatus": "needs-native-profile"
+    }
+  ]
 }

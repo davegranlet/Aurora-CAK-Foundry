@@ -25,7 +25,9 @@ function createWwe2k25LoaderManager({ gameFolder, isGameRunning, journal, manife
   }
   function status() {
     const value = paths();
-    const executableSupported = same(value.executable, manifest.gameExeSha256);
+    const executableHash = regular(value.executable) ? sha256(value.executable) : '';
+    const observed = (manifest.observedBuilds || []).find((build) => String(build.sha256 || '').toUpperCase() === executableHash);
+    const executableSupported = executableHash === manifest.gameExeSha256;
     const addonList = readAddons(value.addons);
     const addonEnabled = addonList.text.split(/\r?\n/).map((line) => line.trim()).some((line) => line.toLowerCase() === manifest.addonFilename.toLowerCase());
     const coreReady = same(value.core, manifest.coreSha256);
@@ -33,7 +35,7 @@ function createWwe2k25LoaderManager({ gameFolder, isGameRunning, journal, manife
     const operations = journal.list(100);
     const restored = new Set(operations.filter((item) => item.operation === 'restore-wwe2k25-cak-loader' && item.result === 'verified').map((item) => item.enableOperationId));
     const enable = operations.find((item) => item.operation === 'enable-wwe2k25-cak-loader' && item.result === 'verified' && path.resolve(item.game || '').toLowerCase() === value.game.toLowerCase() && !restored.has(item.id));
-    return { game: value.game, executableSupported, coreReady, addonReady, addonEnabled, ready: executableSupported && coreReady && addonReady && addonEnabled, restorableOperationId: enable ? enable.id : '', note: manifest.notes };
+    return { game: value.game, executableSupported, executableHash, buildLabel: observed ? observed.label : 'Unrecognized WWE 2K25 build', loaderStatus: observed ? observed.loaderStatus : 'needs-native-profile', coreReady, addonReady, addonEnabled, ready: executableSupported && coreReady && addonReady && addonEnabled, restorableOperationId: enable ? enable.id : '', note: manifest.notes };
   }
   function verifyRelease() {
     const core = path.join(releaseRoot, manifest.coreFilename);

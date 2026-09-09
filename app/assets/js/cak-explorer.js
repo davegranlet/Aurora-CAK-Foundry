@@ -65,10 +65,11 @@
   }
   function renderLoaderManager(status, operationId) {
     state.loaderOperationId = operationId || status.restorableOperationId || '';
-    const details = `Game build: ${status.executableSupported ? 'supported' : 'not supported'} · Core: ${status.coreReady ? 'verified' : 'missing or different'} · CAK add-on: ${status.addonReady ? 'verified' : 'missing or different'} · Add-on enabled: ${status.addonEnabled ? 'yes' : 'no'}.`;
+    const details = `Game build: ${status.buildLabel || (status.executableSupported ? 'supported' : 'not supported')} · Core: ${status.coreReady ? 'verified' : 'missing or different'} · CAK add-on: ${status.addonReady ? 'verified' : 'missing or different'} · Add-on enabled: ${status.addonEnabled ? 'yes' : 'no'}.`;
     byId('loaderManagerEnable').disabled = Boolean(status.ready);
     byId('loaderManagerRestore').disabled = !state.loaderOperationId;
-    message('loaderManagerMessage', status.ready ? `CAK Loader is ready. ${details}` : `${details} ${status.note}`, status.ready ? 'good' : 'working');
+    const loaderNote = status.loaderStatus === 'needs-native-profile' ? ' Baking and Mod Manager are ready for this build; native loader enablement remains blocked until its game-call profile is reviewed.' : status.note;
+    message('loaderManagerMessage', status.ready ? `CAK Loader is ready. ${details}` : `${details} ${loaderNote}`, status.ready ? 'good' : 'working');
   }
   async function refreshLoaderManager() {
     try { message('loaderManagerMessage', 'Checking the supported game build and loader files...', 'working'); renderLoaderManager(await api.getWwe2k25Loader()); }
