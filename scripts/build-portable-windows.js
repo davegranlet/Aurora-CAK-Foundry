@@ -40,6 +40,7 @@ copyFile(path.join(root, 'app', 'assets', 'js', 'cak-explorer.js'), path.join(st
 copyFile(path.join(root, 'app', 'assets', 'img', 'app-icon.ico'), path.join(staging, 'app', 'assets', 'img', 'app-icon.ico'));
 copyFile(path.join(root, 'app', 'data', 'cak-known-paths.json'), path.join(staging, 'app', 'data', 'cak-known-paths.json'));
 copyFile(path.join(root, 'app', 'data', 'compatibility', 'secure-datacrtllink.json'), path.join(staging, 'app', 'data', 'compatibility', 'secure-datacrtllink.json'));
+copyFile(path.join(root, 'app', 'data', 'compatibility', 'wwe2k25-cak-loader.json'), path.join(staging, 'app', 'data', 'compatibility', 'wwe2k25-cak-loader.json'));
 copyDirectory(path.join(root, 'app', 'tools'), path.join(staging, 'app', 'tools'));
 
 const stagedHtmlPath = path.join(staging, 'app', 'cak-explorer.html');
@@ -79,6 +80,7 @@ if (result.error) throw result.error;
 if (result.status !== 0) throw new Error(`Electron Packager failed with exit code ${result.status}.`);
 
 const packaged = path.join(dist, `${product}-win32-x64`);
+copyDirectory(path.join(root, 'app', 'data', 'loader-releases'), path.join(packaged, 'resources', 'loader-releases'));
 for (const name of ['README.txt', 'RELEASE_IDENTITY.txt', 'AURORA-FORGE-LICENSE.txt', 'FAQ.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md', 'AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md', 'AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md', 'INSTALLATION_AND_ROLLBACK.md']) copyFile(path.join(staging, name), path.join(packaged, name));
 copyDirectory(path.join(staging, 'THIRD-PARTY-NOTICES'), path.join(packaged, 'THIRD-PARTY-NOTICES'));
 fs.mkdirSync(releases, { recursive: true });

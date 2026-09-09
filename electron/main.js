@@ -159,7 +159,8 @@ function workshopServices() {
   const collisions = createCakCollisionService({ installRegistry: registry, openArchive: cakReader.openArchive, readDictionary: readCakDictionary });
   const modManifest = createModManifestManager({ installRegistry: registry, journal, isGameRunning: isWwe2K26Running });
   const wwe2k25Mods = createWwe2k25ModManager({ gameFolder: () => readToolConfig().gameFolder || '', isGameRunning: isWwe2K25Running, openArchive: (archivePath) => openSupportedCak(archivePath), journal });
-  const wwe2k25Loader = createWwe2k25LoaderManager({ gameFolder: () => readToolConfig().gameFolder || '', isGameRunning: isWwe2K25Running, journal, manifest: wwe2k25LoaderManifest, releaseRoot: path.join(APP_ROOT, 'data', 'loader-releases', 'wwe2k25-v123') });
+  const wwe2k25ReleaseRoot = app.isPackaged ? path.join(process.resourcesPath, 'loader-releases', 'wwe2k25-v123') : path.join(APP_ROOT, 'data', 'loader-releases', 'wwe2k25-v123');
+  const wwe2k25Loader = createWwe2k25LoaderManager({ gameFolder: () => readToolConfig().gameFolder || '', isGameRunning: isWwe2K25Running, journal, manifest: wwe2k25LoaderManifest, releaseRoot: wwe2k25ReleaseRoot });
   workshopServiceCache = { registry, journal, capabilities, loader, releases, diagnostics, collisions, modManifest, wwe2k25Mods, wwe2k25Loader };
   return workshopServiceCache;
 }
