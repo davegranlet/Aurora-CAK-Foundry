@@ -30,3 +30,4 @@ The WWE 2K25 FDIR 9.3 compatibility layer uses Nenkai's MIT-licensed Bakery/Cake
 ## Source layout note
 
 This repository begins from the exact runtime source used by the completed standalone release. Some shared Aurora Forge Electron services remain present because the released entrypoint imports the shared runtime. Removing that coupling is tracked cleanup work; it is not being hidden behind an unverified rewrite.
+I am adding this here to test if it triggers discord notifications you can safely ignore this.
