@@ -67,4 +67,6 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   ,getCakCollisionReport: () => ipcRenderer.invoke('desktop:workshop-cak-collisions')
   ,getModManifest: () => ipcRenderer.invoke('desktop:workshop-mod-manifest')
   ,saveModManifest: (request) => ipcRenderer.invoke('desktop:workshop-save-mod-manifest', request)
+  ,getWwe2k25ModManager: () => ipcRenderer.invoke('desktop:wwe2k25-mod-manager-status')
+  ,syncWwe2k25Mods: (request) => ipcRenderer.invoke('desktop:wwe2k25-mod-manager-sync', request)
 });

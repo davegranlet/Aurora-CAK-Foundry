@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const api = window.WWE2K26Desktop;
-  const state = { archivePath: '', outputPath: '', repackSource: '', page: 0, pages: 1, pageSize: 100, query: '', type: '', scope: 'resolved', items: [], selected: new Set(), selectableIds: null, selectableTotal: 0 };
+  const state = { archivePath: '', outputPath: '', repackSource: '', page: 0, pages: 1, pageSize: 100, query: '', type: '', scope: 'resolved', items: [], selected: new Set(), selectableIds: null, selectableTotal: 0, managedCaks: [] };
   const byId = (id) => document.getElementById(id);
   const parentFolder = (name) => { const normalized = String(name || '').replace(/\\/g, '/'); const split = normalized.lastIndexOf('/'); return split > 0 ? normalized.slice(0, split) : 'Archive root'; };
   const formatBytes = (value) => {
@@ -26,6 +26,25 @@
   function updateSelected() {
     byId('cakSelectedCount').textContent = String(state.selected.size);
     byId('cakExtract').disabled = !state.selected.size || !state.outputPath;
+  }
+  function renderModManager(status) {
+    state.managedCaks = Array.isArray(status.caks) ? status.caks : [];
+    const rows = state.managedCaks.map((cak) => {
+      const row = document.createElement('tr');
+      const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.checked = Boolean(cak.enabled); enabled.dataset.cakName = cak.name;
+      const enabledCell = document.createElement('td'); enabledCell.appendChild(enabled);
+      const nameCell = document.createElement('td'); nameCell.textContent = cak.name;
+      const orderCell = document.createElement('td'); orderCell.textContent = cak.enabled ? String(Number(cak.order) + 1) : '—';
+      row.append(enabledCell, nameCell, orderCell); return row;
+    });
+    byId('modManagerRows').replaceChildren(...rows);
+    byId('modManagerList').hidden = !state.managedCaks.length;
+    byId('modManagerSync').disabled = !state.managedCaks.length;
+    message('modManagerMessage', state.managedCaks.length ? `${state.managedCaks.length} CAK file(s) found in ${status.game}\\mods. Choose the enabled set, then sync once.` : 'No CAK files were found in the game’s mods folder.', state.managedCaks.length ? 'good' : '');
+  }
+  async function refreshModManager() {
+    try { message('modManagerMessage', 'Reading the WWE 2K25 mods folder...', 'working'); renderModManager(await api.getWwe2k25ModManager()); }
+    catch (error) { byId('modManagerSync').disabled = true; message('modManagerMessage', error.message, 'bad'); }
   }
   function renderRows(result) {
     state.items = result.items || [];
@@ -195,5 +214,14 @@
   byId('repackBuild').addEventListener('click', async () => { if (!state.repackSource) return; const button = byId('repackBuild'); button.disabled = true; message('repackMessage', 'Building protected payloads, adding root metadata, and checking the result...', 'working'); try { const result = await api.buildRepackPackage(state.repackSource); if (!result.ok) return; byId('repackVerify').disabled = false; byId('repackOpenOutput').disabled = false; const warning = result.warnings && result.warnings.length ? ` Warning: ${result.warnings.join(' ')}` : ''; const textureNote = result.convertedTextureCount ? ` ${result.convertedTextureCount.toLocaleString()} DDS texture payload(s) were converted to game TEX format and structurally verified.` : ''; message('repackMessage', `Game-ready CAK created. ${result.fileCount.toLocaleString()} archive payload(s) verified after rebuilding: ${result.outputPath}.${textureNote}${warning}`, warning ? 'working' : 'good'); } catch (error) { message('repackMessage', error.message, 'bad'); } finally { button.disabled = false; } });
   byId('repackVerify').addEventListener('click', async () => { try { message('repackMessage', 'Recovering and comparing every protected payload...', 'working'); const result = await api.verifyRepackPackage(); message('repackMessage', `${result.payloadVerified ? 'Catalog and every payload verified' : 'Catalog verified'}: ${result.outputPath}`, 'good'); } catch (error) { message('repackMessage', error.message, 'bad'); } });
   byId('repackOpenOutput').addEventListener('click', async () => { try { await api.openRepackOutput(); } catch (error) { message('repackMessage', error.message, 'bad'); } });
+  byId('modManagerRefresh').addEventListener('click', refreshModManager);
+  byId('modManagerSync').addEventListener('click', async () => {
+    const cakOrder = [...byId('modManagerRows').querySelectorAll('input[type="checkbox"]')].filter((box) => box.checked).map((box) => box.dataset.cakName);
+    if (!window.confirm(`Sync ${cakOrder.length} enabled CAK(s) to mods\\manifest.json?\n\nFoundry will block the change if any selected CAKs replace the same game file.`)) return;
+    byId('modManagerSync').disabled = true; message('modManagerMessage', 'Checking selected CAKs for exact conflicts...', 'working');
+    try { const result = await api.syncWwe2k25Mods({ cakOrder }); renderModManager(result); message('modManagerMessage', `Enabled-mod manifest saved. ${result.enabled} CAK(s) are active for the next game launch.`, 'good'); }
+    catch (error) { message('modManagerMessage', error.message, 'bad'); }
+    finally { byId('modManagerSync').disabled = !state.managedCaks.length; }
+  });
   initialize();
 }());

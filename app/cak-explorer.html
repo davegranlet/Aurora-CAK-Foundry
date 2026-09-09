@@ -102,6 +102,15 @@
         <p id="repackMessage" class="cak-message" role="status"></p>
       </section>
 
+      <section class="ai-panel app-panel" id="wwe2k25-mod-manager">
+        <div class="section-label" style="margin-top:0;">WWE 2K25 Mod Manager</div>
+        <h2>Choose which CAKs are enabled</h2>
+        <p>Foundry reads the <code>mods</code> folder in your selected game installation. Check the CAKs you want enabled, then sync once. Foundry checks exact file-path conflicts before changing <code>mods\manifest.json</code>.</p>
+        <div class="ai-actions"><button id="modManagerRefresh" class="ai-btn secondary" type="button">Refresh Mod List</button><button id="modManagerSync" class="ai-btn" type="button" disabled>Sync Enabled Mods</button></div>
+        <div id="modManagerList" class="cak-table-shell" hidden><table class="cak-table"><thead><tr><th>Enabled</th><th>CAK file</th><th>Load order</th></tr></thead><tbody id="modManagerRows"></tbody></table></div>
+        <p id="modManagerMessage" class="cak-message" role="status">Choose your WWE 2K25 game folder above, then refresh the mod list.</p>
+      </section>
+
       <section class="ai-panel warn-panel app-panel">
         <div class="section-label" style="margin-top:0;">Important</div>
         <h2>Original game archives remain read-only</h2>
