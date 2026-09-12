@@ -212,7 +212,9 @@ function parseFiles(buffer, expected, stringSize, folderCount, archiveSize, payl
     // payload supplied outside this physical CAK. Preserve it as unavailable
     // instead of rejecting the complete archive. Extraction remains disabled
     // until a matching physical payload source is known.
-    const externalCatalogEntry = offset === 0n || (offset >= BigInt(payloadStart) && payloadEnd > BigInt(archiveSize));
+    const zeroOffsetReference = offset === 0n;
+    const externalPayload = offset >= BigInt(payloadStart) && payloadEnd > BigInt(archiveSize);
+    const externalCatalogEntry = zeroOffsetReference || externalPayload;
     if (stringOffset >= stringSize || folderIndex >= Math.max(1, folderCount) || (!payloadInsideArchive && !externalCatalogEntry)) {
       throw new Error(`A CAK file record contains an unsafe offset or size (record ${files.length}, offset ${offset}, stored ${storedSize}, expanded ${expandedSize}, archive ${archiveSize}).`);
     }
@@ -220,7 +222,7 @@ function parseFiles(buffer, expected, stringSize, folderCount, archiveSize, payl
     for (let index = 0; index < chunkCount; index += 1) chunks.push({ end: buffer.readUInt32LE(cursor + 34 + index * 4), flag: buffer[cursor + 34 + chunkCount * 4 + index] });
     const typeBytes = buffer.subarray(cursor + 12, cursor + 16);
     const type = [...typeBytes].every((value) => value === 0 || (value >= 32 && value <= 126)) ? typeBytes.toString('ascii').replace(/\0/g, '').trim().toLowerCase() : '';
-    files.push({ id: files.length, stringOffset, folderIndex, storedSize, expandedSize, offset: offset.toString(), type, chunkCount, chunks, compressed: buffer[cursor + 30] === 1, protected: buffer[cursor + 31] === 1, flags: [...buffer.subarray(cursor + 30, cursor + 34)], extractable: payloadInsideArchive, externalPayload: externalCatalogEntry && !payloadInsideArchive });
+    files.push({ id: files.length, stringOffset, folderIndex, storedSize, expandedSize, offset: offset.toString(), type, chunkCount, chunks, compressed: buffer[cursor + 30] === 1, protected: buffer[cursor + 31] === 1, flags: [...buffer.subarray(cursor + 30, cursor + 34)], extractable: payloadInsideArchive, externalPayload });
     cursor += recordSize;
   }
   return { files, bytesRead: cursor, trailingBytes: buffer.length - cursor };
@@ -378,7 +380,7 @@ function openArchive(archivePath, dictionary = {}) {
       archivePath: resolved, archiveName: path.basename(resolved), archiveSize, magic, key: keyResult.key,
       keyRecovered: keyResult.recovered, payloadStart: w[20], header: w, files: fileTable.files,
       folders: folderTable.folders, fileHashes, folderHashes,
-      warnings: [fileTable.trailingBytes ? `${fileTable.trailingBytes} unused file-table bytes were preserved.` : '', folderTable.trailingBytes ? `${folderTable.trailingBytes} unused folder-table bytes were preserved.` : '', fileTable.files.some((file) => file.externalPayload) ? 'This archive lists payloads outside its local byte range; they were retained as external payload records and cannot be extracted from this CAK alone.' : ''].filter(Boolean)
+      warnings: [fileTable.trailingBytes ? `${fileTable.trailingBytes} unused file-table bytes were preserved.` : '', folderTable.trailingBytes ? `${folderTable.trailingBytes} unused folder-table bytes were preserved.` : '', fileTable.files.some((file) => file.externalPayload) ? 'This archive lists payloads outside its local byte range. They need matching exact-size files from a separately extracted companion folder.' : ''].filter(Boolean)
     };
   } finally { fs.closeSync(fd); }
 }
@@ -394,13 +396,13 @@ function buildNativeDictionary(archivePaths) {
 }
 
 function publicSummary(session) {
-  const payloadFiles = session.files.filter((file) => file.extractable !== false);
+  const payloadFiles = session.files.filter((file) => file.extractable || file.externalPayload);
   const totalExpanded = payloadFiles.reduce((sum, file) => sum + file.expandedSize, 0);
   const resolvedNames = payloadFiles.filter((file) => file.nameResolved).length;
   const resolvedFolders = session.folders.filter((folder) => folder.nameResolved).length;
   const readyFiles = session.files.filter((file) => file.nameResolved && file.extractable).length;
   const rawHashPayloads = session.files.filter((file) => !file.nameResolved && file.extractable).length;
-  const externalReferences = session.files.filter((file) => !file.extractable).length;
+  const externalReferences = session.files.filter((file) => !file.extractable && !file.externalPayload).length;
   const externalPayloads = session.files.filter((file) => file.externalPayload).length;
   return { archiveName: session.archiveName, archivePath: session.archivePath, archiveSize: session.archiveSize, fileCount: payloadFiles.length, catalogEntryCount: session.files.length, folderCount: session.folders.length, totalExpanded, resolvedNames, unresolvedNames: payloadFiles.length - resolvedNames, resolvedFolders, readyFiles, rawHashPayloads, externalReferences, externalPayloads, keyRecovered: session.keyRecovered, warnings: session.warnings };
 }
@@ -411,9 +413,9 @@ function searchFiles(session, options = {}) {
   const scope = ['resolved', 'unresolved', 'all'].includes(options.scope) ? options.scope : 'resolved';
   const pageSize = Math.min(250, Math.max(10, Number(options.pageSize) || 100));
   const page = Math.max(0, Number(options.page) || 0);
-  const filtered = session.files.filter((file) => file.extractable !== false && (scope === 'all' || (scope === 'resolved' ? file.nameResolved : !file.nameResolved)) && (!query || file.name.toLowerCase().includes(query) || String(file.hash || '').includes(query) || file.type.includes(query)) && (!type || file.type === type));
+  const filtered = session.files.filter((file) => (file.extractable || file.externalPayload) && (scope === 'all' || (scope === 'resolved' ? file.nameResolved : !file.nameResolved)) && (!query || file.name.toLowerCase().includes(query) || String(file.hash || '').includes(query) || file.type.includes(query)) && (!type || file.type === type));
   const items = filtered.slice(page * pageSize, (page + 1) * pageSize).map(({ chunks, flags, ...file }) => file);
-  const selectable = filtered.filter((file) => file.extractable !== false && file.nameResolved);
+  const selectable = filtered.filter((file) => (file.extractable || file.externalPayload) && file.nameResolved);
   const result = { items, total: filtered.length, selectableTotal: selectable.length, page, pageSize, pages: Math.max(1, Math.ceil(filtered.length / pageSize)), types: [...new Set(session.files.map((file) => file.type).filter(Boolean))].sort() };
   if (options.includeSelectableIds === true) result.selectableIds = selectable.map((file) => file.id);
   return result;

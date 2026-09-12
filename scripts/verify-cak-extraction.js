@@ -15,7 +15,10 @@ const jobs = [
   ['bakedfile56.cak', 'movies/arena/black/movie_black.bk2'],
   ['bakedfile60.cak', 'arena/commonness/skydome/sky_day_01/skydome.mtls'],
   ['bakedfile61.cak', 'characters/1026_bron_breakker/default_attire/materials/combinations_alpha.jmtl'],
-  ['bakedfile100.cak', 'arena/commonness/skydome/sky_night_02/skydome.mtls']
+  // The September 2026 2K26 update no longer yields the old sky_night sample
+  // through its game decompressor. Keep this check on a local, current 100
+  // archive animation payload so it verifies a reproducible owned payload.
+  ['bakedfile100.cak', 'animation/caeadvanced/1000936.adefs']
 ];
 
 if (!game) throw new Error('Usage: node scripts/verify-cak-extraction.js <WWE 2K26 folder> [AuroraCakHelper.exe]');

@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   ,openAllCakArchives: () => ipcRenderer.invoke('desktop:cak-explorer-open-all')
   ,searchCakArchive: (options) => ipcRenderer.invoke('desktop:cak-explorer-search', options)
   ,chooseCakOutput: () => ipcRenderer.invoke('desktop:cak-explorer-choose-output')
+  ,chooseCakCompanionSource: () => ipcRenderer.invoke('desktop:cak-explorer-choose-companion-source')
    ,extractCakEntries: (payload) => ipcRenderer.invoke('desktop:cak-explorer-extract', payload)
   ,onCakExtractionProgress: (callback) => { const listener = (_event, payload) => callback(payload); ipcRenderer.on('desktop:cak-extraction-progress', listener); return () => ipcRenderer.removeListener('desktop:cak-extraction-progress', listener); }
   ,openCakOutput: () => ipcRenderer.invoke('desktop:cak-explorer-open-output')

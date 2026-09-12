@@ -8,7 +8,7 @@ Aurora CAK Foundry is the standalone WWE 2K25 and WWE 2K26 `.cak` extractor, reb
 
 - Public release: **v1.7.8**
 - Runtime version: **1.7.8**
-- Status: **Ready** for WWE 2K25 v1.23 catalog/name recovery, extraction, identity-preserving protected rebuild, verified archive mount acceptance, and one protected v9.3 changed-content visual replacement. Other asset classes, multi-archive collisions, and existing WWE 2K26 labels remain unchanged or **Experimental**.
+- Status: **Ready** for WWE 2K25 v1.23 catalog/name recovery, extraction, identity-preserving protected rebuild, verified archive mount acceptance, and one protected v9.3 changed-content visual replacement. WWE 2K26 v9.9 supports local payload extraction and protected baking; its September 2026 `bakedfile03/100` external payload records require an exact-size file from the user's separately extracted companion folder. Other asset classes, multi-archive collisions, and existing WWE 2K26 labels remain unchanged or **Experimental**.
 
 Each public artifact keeps its own name, version, checksum, notes, bug report, and fix report. An older package is never silently replaced by a newer build.
 
@@ -19,6 +19,7 @@ Each public artifact keeps its own name, version, checksum, notes, bug report, a
 - Uses the included catalog to recover known paths and filenames.
 - Records unresolved identities honestly instead of inventing names.
 - Rebuilds an extracted mod folder into a protected game-ready CAK.
+- Safely recovers 2K26 catalog payloads stored outside `bakedfile03.cak` or `bakedfile100.cak` from a user-selected companion extraction only when the virtual path and exact expected size agree; zero-offset references and short placeholder files stay blocked.
 - Reopens and byte-checks rebuilt payloads.
 
 No WWE archives, Oodle DLLs, extracted game assets, or personal paths are included. The program uses the Oodle library from the user's own game installation when required.

@@ -874,6 +874,14 @@ ipcMain.handle('desktop:cak-explorer-choose-output', async () => {
   return { ok: true, path: selected };
 });
 
+ipcMain.handle('desktop:cak-explorer-choose-companion-source', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose the extracted 2K26 companion folder', properties: ['openDirectory'] });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  const selected = path.resolve(result.filePaths[0]);
+  if (!fs.existsSync(selected) || !fs.statSync(selected).isDirectory()) throw new Error('Choose a readable extracted companion folder.');
+  return { ok: true, path: selected };
+});
+
 ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
   if (process.platform !== 'win32') throw new Error('Native CAK extraction is currently Windows-only because WWE 2K26 supplies a Windows Oodle library. Linux can still browse and search the archive catalog safely.');
   if (!currentCakSession) throw new Error('Open a CAK archive first.');
@@ -885,7 +893,14 @@ ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
   if (config.gameFolder && (outputRoot.toLowerCase() === path.resolve(config.gameFolder).toLowerCase() || outputRoot.toLowerCase().startsWith(path.resolve(config.gameFolder).toLowerCase() + path.sep))) throw new Error('Extraction into the game folder is blocked.');
   const files = ids.map((id) => currentCakSession.files[id]).filter(Boolean);
   if (files.length !== ids.length) throw new Error('One or more selected entries no longer exist. Reopen the archive.');
-  if (files.some((file) => !file.extractable)) throw new Error('One or more selected catalog entries store their payload in another archive and cannot be extracted from this CAK alone.');
+  const unavailableReferences = files.filter((file) => !file.extractable && !file.externalPayload);
+  if (unavailableReferences.length) throw new Error('One or more selected catalog entries are references with no recoverable payload source.');
+  const companionFiles = files.filter((file) => file.externalPayload);
+  const localFiles = files.filter((file) => file.extractable);
+  const companionRoot = companionFiles.length ? path.resolve(String(payload && payload.companionRoot || '')) : '';
+  if (companionFiles.length && (!companionRoot || !fs.existsSync(companionRoot) || !fs.statSync(companionRoot).isDirectory())) {
+    throw new Error('These entries are stored outside the selected CAK. Choose the extracted 2K26 companion folder before extracting them.');
+  }
   const unresolvedPayloads = files.filter((file) => !file.nameResolved);
   if (unresolvedPayloads.length) throw new Error(`Extraction requires genuine catalog paths. ${unresolvedPayloads.length.toLocaleString()} selected payload(s) lack verified paths, so nothing was extracted.`);
   const totalBytes = files.reduce((sum, file) => sum + file.expandedSize, 0);
@@ -894,16 +909,28 @@ ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
     const freeBytes = Number(storage.bavail) * Number(storage.bsize);
     if (freeBytes < totalBytes + 64 * 1024 * 1024) throw new Error('The output drive does not have enough free space for this extraction job.');
   }
-  const oodlePath = resolveOodlePath(files[0].sourceArchivePath || currentCakSession.archivePath);
-  if (files.some((file) => file.compressed) && !oodlePath) throw new Error('oo2core_9_win64.dll was not found. Choose the WWE 2K26 game folder at the top of the extractor.');
+  const oodlePath = localFiles.length ? resolveOodlePath(localFiles[0].sourceArchivePath || currentCakSession.archivePath) : '';
+  if (localFiles.some((file) => file.compressed) && !oodlePath) throw new Error('oo2core_9_win64.dll was not found. Choose the WWE 2K26 game folder at the top of the extractor.');
   const helper = cakHelperPath();
-  if (!fs.existsSync(helper)) throw new Error('The included Aurora Forge extraction helper is missing.');
+  if (localFiles.length && !fs.existsSync(helper)) throw new Error('The included Aurora Forge extraction helper is missing.');
   const groups = new Map();
-  for (const file of files) {
+  for (const file of localFiles) {
     const archivePath = file.sourceArchivePath || currentCakSession.archivePath;
     if (!groups.has(archivePath)) groups.set(archivePath, []);
     groups.get(archivePath).push(file);
   }
+  const companionCopies = companionFiles.map((file) => {
+    const relativeParts = String(file.name || '').replace(/\\/g, '/').split('/').filter(Boolean);
+    const source = path.resolve(companionRoot, ...relativeParts);
+    const target = path.resolve(outputRoot, ...relativeParts);
+    if (!relativeParts.length || !isPathInside(source, companionRoot) || !isPathInside(target, outputRoot)) throw new Error('A companion catalog path was unsafe. Nothing was copied.');
+    if (!fs.existsSync(source)) throw new Error(`The companion folder is missing ${file.name}. Nothing was copied.`);
+    const sourceStat = fs.lstatSync(source);
+    if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) throw new Error(`The companion source for ${file.name} must be a real file. Nothing was copied.`);
+    if (sourceStat.size !== file.expandedSize) throw new Error(`The companion source for ${file.name} is ${sourceStat.size} bytes; the CAK catalog requires ${file.expandedSize} bytes. It may be a placeholder, so nothing was copied.`);
+    if (fs.existsSync(target) && !(payload && payload.overwrite)) throw new Error(`${file.name} already exists in the output folder. Enable replace or choose another output folder.`);
+    return { file, source, target };
+  });
   const results = [];
   const archiveGroups = [...groups.entries()];
   const sendProgress = (details) => { if (!event.sender.isDestroyed()) event.sender.send('desktop:cak-extraction-progress', details); };
@@ -954,6 +981,12 @@ ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
       sendProgress({ phase: 'extracting', processed: Math.min(results.length, files.length), total: files.length, succeeded: results.filter((item) => item.ok).length, failed: results.filter((item) => !item.ok).length, archiveIndex: groupIndex + 1, archiveCount: archiveGroups.length, archive: path.basename(archivePath) });
     }
   }
+    for (const item of companionCopies) {
+      fs.mkdirSync(path.dirname(item.target), { recursive: true });
+      fs.copyFileSync(item.source, item.target);
+      results.push({ ok: true, id: item.file.sourceId === undefined ? item.file.id : item.file.sourceId, archive: `${path.basename(item.file.sourceArchivePath || currentCakSession.archivePath)} via companion`, path: item.target, bytes: fs.statSync(item.target).size, error: '' });
+      sendProgress({ phase: 'extracting', processed: Math.min(results.length, files.length), total: files.length, succeeded: results.filter((entry) => entry.ok).length, failed: results.filter((entry) => !entry.ok).length, archiveIndex: archiveGroups.length, archiveCount: archiveGroups.length, archive: 'companion source' });
+    }
     const succeeded = results.filter((item) => item.ok).length;
     lastCakOutputDir = outputRoot;
     const report = [
@@ -967,8 +1000,8 @@ ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
     const reportPath = path.join(outputRoot, 'Aurora_Forge_Extraction_Report.txt');
     if (fs.existsSync(reportPath)) fs.appendFileSync(reportPath, '\n' + report.split('\n').slice(2).join('\n') + '\n', 'utf8');
     else fs.writeFileSync(reportPath, report + '\n', 'utf8');
-    const successfulKeys = new Set(results.filter((item) => item.ok).map((item) => `${String(item.archive || '').toLowerCase()}::${Number(item.id)}`));
-    const newManifestEntries = files.filter((file) => successfulKeys.has(`${path.basename(file.sourceArchivePath || currentCakSession.archivePath).toLowerCase()}::${Number(file.sourceId === undefined ? file.id : file.sourceId)}`)).map((file) => {
+    const successfulIds = new Set(results.filter((item) => item.ok).map((item) => Number(item.id)));
+    const newManifestEntries = files.filter((file) => successfulIds.has(Number(file.sourceId === undefined ? file.id : file.sourceId))).map((file) => {
       const folder = currentCakSession.folders[file.folderIndex];
       return { relativePath: file.name, fileHash: file.hash, folderIndex: file.folderIndex, folderHash: folder && folder.hash || '', type: file.type, nameResolved: Boolean(file.nameResolved), sourceArchive: path.basename(file.sourceArchivePath || currentCakSession.archivePath) };
     });
@@ -1002,14 +1035,14 @@ ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
       expectedExpandedSize: file.expandedSize || 0,
       referencedByArchive: path.basename(file.sourceArchivePath || currentCakSession.archivePath),
       matchingPayloadArchives: [...(payloadOwners.get(String(file.name || '').toLowerCase()) || [])],
-      status: 'catalog-reference-no-local-payload'
+      status: file.externalPayload ? 'companion-payload-required' : 'catalog-reference-no-local-payload'
     }));
     if (externalReferenceEntries.length) {
       const referencePath = path.join(outputRoot, '.aurora-cak-external-references.json');
       const referenceReport = {
         readabilityNote: 'I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.',
         schema: 'aurora-forge-cak-external-references/v1',
-        purpose: 'Tracks catalog references that have no payload in the referencing CAK so their owning archives and relationships can be researched without showing them as extractable files.',
+        purpose: 'Tracks catalog records without a local payload. Companion payload records require an exact-size file from a separately extracted source; zero-offset references remain non-extractable.',
         entries: externalReferenceEntries
       };
       fs.writeFileSync(referencePath, JSON.stringify(referenceReport, null, 2) + '\n', 'utf8');

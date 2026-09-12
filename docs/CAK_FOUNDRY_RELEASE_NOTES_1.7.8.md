@@ -4,6 +4,12 @@
 
 This release completes the protected WWE 2K25 FDIR v9.3 rebuild path while preserving the existing WWE 2K26 path.
 
+## September 2026 WWE 2K26 archive update
+
+- `bakedfile03.cak` and `bakedfile100.cak` are accepted when their valid catalogs include payload records beyond the physical CAK length.
+- Regular in-archive payloads extract normally. A named external payload can instead be copied from a separately extracted companion folder only after Foundry confirms its virtual path, real-file status, and exact catalogued expanded size.
+- Zero-offset catalog references remain unavailable. Short extraction placeholders, including incomplete texture exports, are rejected rather than baked.
+
 ## What changed
 
 - Builds WWE 2K25 archives with the filename-derived protected catalog expected by the game.
