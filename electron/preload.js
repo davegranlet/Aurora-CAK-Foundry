@@ -48,7 +48,6 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   ,openPac19Output: () => ipcRenderer.invoke('desktop:pac19-open-output')
   ,choosePac19Replacement: () => ipcRenderer.invoke('desktop:pac19-choose-replacement')
   ,replacePac19Entry: (payload) => ipcRenderer.invoke('desktop:pac19-replace', payload)
-  ,analyzePac19Motion: () => ipcRenderer.invoke('desktop:pac19-analyze-motion')
   ,getCak20Status: () => ipcRenderer.invoke('desktop:cak20-status')
   ,chooseCak20GameFolder: () => ipcRenderer.invoke('desktop:cak20-choose-game-folder')
   ,listCak20Files: (options) => ipcRenderer.invoke('desktop:cak20-list-files', options)

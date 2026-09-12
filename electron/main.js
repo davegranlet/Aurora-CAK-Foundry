@@ -7,7 +7,6 @@ const cakReader = require('./cak-reader');
 const cakV93 = require('./cak-v93-backend');
 const cak20Reader = require('./cak20-reader');
 const archiveRepackager = require('./archive-repackager');
-const motion19Analyzer = require('../scripts/analyze-2k19-motion');
 const { createGameInstallRegistry } = require('./services/game-install-registry');
 const { createOperationJournal } = require('./services/operation-journal');
 const { createCapabilityRegistry } = require('./services/capability-registry');
@@ -1136,26 +1135,6 @@ ipcMain.handle('desktop:pac19-replace', async (_event, payload) => {
   const response = await runPac19Helper({ action: 'replace', archivePath: currentPac19Archive, oodlePath: pac19OodlePath(currentPac19Archive), entryId: payload?.entryId, replacementPath: payload?.replacementPath, outputPath });
   lastPac19OutputDir = path.dirname(outputPath);
   return response;
-});
-
-ipcMain.handle('desktop:pac19-analyze-motion', async () => {
-  const selected = await dialog.showOpenDialog({
-    title: 'Choose a folder containing decoded WWE 2K19 motion files',
-    defaultPath: lastPac19OutputDir || app.getPath('documents'),
-    properties: ['openDirectory']
-  });
-  if (selected.canceled || !selected.filePaths[0]) return { ok: false };
-  const inputPath = path.resolve(selected.filePaths[0]);
-  const report = motion19Analyzer.analyzeTarget(inputPath);
-  const destination = await dialog.showSaveDialog({
-    title: 'Save the read-only motion analysis report',
-    defaultPath: path.join(inputPath, 'Aurora_Forge_WWE2K19_Motion_Analysis.json'),
-    filters: [{ name: 'JSON report', extensions: ['json'] }]
-  });
-  if (destination.canceled || !destination.filePath) return { ok: false };
-  const outputPath = destination.filePath.toLowerCase().endsWith('.json') ? destination.filePath : destination.filePath + '.json';
-  fs.writeFileSync(outputPath, JSON.stringify(report, null, 2) + '\n', 'utf8');
-  return { ok: true, outputPath, accepted: report.accepted, rejected: report.rejected };
 });
 
 ipcMain.handle('desktop:cak20-status', async () => {

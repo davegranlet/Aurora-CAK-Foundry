@@ -33,7 +33,6 @@ if (!fs.existsSync(packager)) throw new Error('The pinned Electron Packager inst
 fs.rmSync(staging, { recursive: true, force: true });
 fs.mkdirSync(staging, { recursive: true });
 copyDirectory(path.join(root, 'electron'), path.join(staging, 'electron'));
-copyFile(path.join(root, 'scripts', 'analyze-2k19-motion.js'), path.join(staging, 'scripts', 'analyze-2k19-motion.js'));
 copyFile(path.join(root, 'app', 'cak-explorer.html'), path.join(staging, 'app', 'cak-explorer.html'));
 copyFile(path.join(root, 'app', 'assets', 'css', 'style.css'), path.join(staging, 'app', 'assets', 'css', 'style.css'));
 copyFile(path.join(root, 'app', 'assets', 'js', 'cak-explorer.js'), path.join(staging, 'app', 'assets', 'js', 'cak-explorer.js'));
