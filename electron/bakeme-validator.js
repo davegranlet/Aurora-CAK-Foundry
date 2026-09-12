@@ -33,13 +33,13 @@ function validateBakeMeRoot(sourcePath, knownGamePaths) {
   if (!(knownGamePaths instanceof Set) || !knownGamePaths.size) throw new Error('Cannot verify this BakeMe folder: choose a configured WWE 2K25 game folder first so Foundry can read its CAK catalog.');
   const payloads = findPayloads(root);
   if (!payloads.length) throw new Error('Cannot bake this BakeMe folder: it contains no mod files. Copy modded game files into it, keeping their exact extracted paths.');
-  const invalid = payloads.filter((file) => !knownGamePaths.has(file.gamePath));
-  if (invalid.length) {
-    const examples = invalid.slice(0, 8).map((file) => `“${file.relativePath}”`).join(', ');
-    const suffix = invalid.length > 8 ? ` (plus ${invalid.length - 8} more)` : '';
-    throw new Error(`Cannot bake this folder: ${invalid.length} file path(s) do not exist in the selected WWE 2K25 CAK catalog: ${examples}${suffix}. Keep each mod file at the exact path it had after extraction.`);
-  }
-  return { root, fileCount: payloads.length, catalogVerified: true };
+  // The game catalog is used to select the correct archive/profile and to
+  // validate known replacement payloads, but it is not an allow-list. Mods
+  // routinely add new assets (animations, entrance data, textures, etc.) that
+  // cannot exist in the stock catalog. Every safe file under BakeMe is valid
+  // input; archive/path safety is enforced by findPayloads and the repackager.
+  const unknownPaths = payloads.filter((file) => !knownGamePaths.has(file.gamePath));
+  return { root, fileCount: payloads.length, catalogVerified: true, unknownPaths: unknownPaths.length };
 }
 
-module.exports = { normaliseGamePath, validateBakeMeRoot };
+module.exports = { normaliseGamePath, findPayloads, validateBakeMeRoot };
