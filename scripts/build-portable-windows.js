@@ -9,7 +9,7 @@ const staging = path.join(root, 'build', 'standalone-cak');
 const dist = path.join(root, 'dist');
 const releases = path.join(root, 'portable-release');
 const product = 'Aurora CAK Foundry';
-const publicVersion = '1.7.8';
+const publicVersion = '1.7.9';
 const artifactName = `Aurora-CAK-Foundry-v${publicVersion}-Windows-x64.zip`;
 const packager = path.join(root, '..', 'AuroraForge_WWE_PC-Game_Modding_Tool', 'node_modules', '.bin', 'electron-packager.cmd');
 
@@ -67,7 +67,7 @@ const notice = '**Readability note:** I ran this document through an “explain 
 fs.writeFileSync(path.join(staging, 'RELEASE_IDENTITY.txt'), `${notice}\n\nProduct: ${product}\nPublic version: ${publicVersion}\nRuntime version: ${publicVersion}\nChannel: Ready\nArtifact: ${artifactName}\n`);
 fs.writeFileSync(path.join(staging, 'README.txt'), `${notice}\n\n${product} v${publicVersion}\n\nExtract this ZIP, keep its contents together, and run Aurora CAK Foundry.exe. No WWE game archives or Oodle DLL are included.\n`);
 copyFile(path.join(root, 'LICENSE'), path.join(staging, 'AURORA-FORGE-LICENSE.txt'));
-for (const name of ['FAQ.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md', 'AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md', 'AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md', 'INSTALLATION_AND_ROLLBACK.md']) {
+for (const name of ['FAQ.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.9.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md', 'AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md', 'AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md', 'INSTALLATION_AND_ROLLBACK.md']) {
   copyFile(path.join(root, 'docs', name), path.join(staging, name));
 }
 copyFile(path.join(root, 'third_party', 'Nenkai-Bakery', 'LICENSE.txt'), path.join(staging, 'THIRD-PARTY-NOTICES', 'Nenkai-Bakery-MIT-LICENSE.txt'));
@@ -81,7 +81,7 @@ if (result.status !== 0) throw new Error(`Electron Packager failed with exit cod
 
 const packaged = path.join(dist, `${product}-win32-x64`);
 copyDirectory(path.join(root, 'app', 'data', 'loader-releases'), path.join(packaged, 'resources', 'loader-releases'));
-for (const name of ['README.txt', 'RELEASE_IDENTITY.txt', 'AURORA-FORGE-LICENSE.txt', 'FAQ.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md', 'AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md', 'AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md', 'INSTALLATION_AND_ROLLBACK.md']) copyFile(path.join(staging, name), path.join(packaged, name));
+for (const name of ['README.txt', 'RELEASE_IDENTITY.txt', 'AURORA-FORGE-LICENSE.txt', 'FAQ.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.9.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md', 'AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md', 'AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md', 'INSTALLATION_AND_ROLLBACK.md']) copyFile(path.join(staging, name), path.join(packaged, name));
 copyDirectory(path.join(staging, 'THIRD-PARTY-NOTICES'), path.join(packaged, 'THIRD-PARTY-NOTICES'));
 fs.mkdirSync(releases, { recursive: true });
 const destination = path.join(releases, artifactName);
