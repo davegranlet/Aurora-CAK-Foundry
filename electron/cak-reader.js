@@ -206,8 +206,13 @@ function parseFiles(buffer, expected, stringSize, folderCount, archiveSize, payl
     const expandedSize = buffer.readUInt32LE(cursor + 24);
     const folderIndex = buffer.readUInt32LE(cursor + 4);
     const stringOffset = buffer.readUInt32LE(cursor);
-    const payloadInsideArchive = offset >= BigInt(payloadStart) && offset + BigInt(storedSize) <= BigInt(archiveSize);
-    const externalCatalogEntry = offset === 0n;
+    const payloadEnd = offset + BigInt(storedSize);
+    const payloadInsideArchive = offset >= BigInt(payloadStart) && payloadEnd <= BigInt(archiveSize);
+    // Current WWE 2K26 update archives can keep a valid catalog record for a
+    // payload supplied outside this physical CAK. Preserve it as unavailable
+    // instead of rejecting the complete archive. Extraction remains disabled
+    // until a matching physical payload source is known.
+    const externalCatalogEntry = offset === 0n || (offset >= BigInt(payloadStart) && payloadEnd > BigInt(archiveSize));
     if (stringOffset >= stringSize || folderIndex >= Math.max(1, folderCount) || (!payloadInsideArchive && !externalCatalogEntry)) {
       throw new Error(`A CAK file record contains an unsafe offset or size (record ${files.length}, offset ${offset}, stored ${storedSize}, expanded ${expandedSize}, archive ${archiveSize}).`);
     }
@@ -215,7 +220,7 @@ function parseFiles(buffer, expected, stringSize, folderCount, archiveSize, payl
     for (let index = 0; index < chunkCount; index += 1) chunks.push({ end: buffer.readUInt32LE(cursor + 34 + index * 4), flag: buffer[cursor + 34 + chunkCount * 4 + index] });
     const typeBytes = buffer.subarray(cursor + 12, cursor + 16);
     const type = [...typeBytes].every((value) => value === 0 || (value >= 32 && value <= 126)) ? typeBytes.toString('ascii').replace(/\0/g, '').trim().toLowerCase() : '';
-    files.push({ id: files.length, stringOffset, folderIndex, storedSize, expandedSize, offset: offset.toString(), type, chunkCount, chunks, compressed: buffer[cursor + 30] === 1, protected: buffer[cursor + 31] === 1, flags: [...buffer.subarray(cursor + 30, cursor + 34)], extractable: payloadInsideArchive });
+    files.push({ id: files.length, stringOffset, folderIndex, storedSize, expandedSize, offset: offset.toString(), type, chunkCount, chunks, compressed: buffer[cursor + 30] === 1, protected: buffer[cursor + 31] === 1, flags: [...buffer.subarray(cursor + 30, cursor + 34)], extractable: payloadInsideArchive, externalPayload: externalCatalogEntry && !payloadInsideArchive });
     cursor += recordSize;
   }
   return { files, bytesRead: cursor, trailingBytes: buffer.length - cursor };
@@ -367,13 +372,13 @@ function openArchive(archivePath, dictionary = {}) {
       file.name = selectedName && !path.isAbsolute(selectedName) && !selectedName.split(/[\\/]/).includes('..') ? selectedName.replace(/\\/g, '/') : `Unresolved/${path.basename(resolved, path.extname(resolved))}/${safeGeneratedFolder(file, folderTable.folders)}/${safeGeneratedName(file)}`;
       file.nameResolved = Boolean(selectedName);
       file.folderName = folderTable.folders[file.folderIndex] && folderTable.folders[file.folderIndex].name || (selectedName ? path.posix.dirname(extractionPath(selectedName)) : '');
-      file.availability = file.extractable ? (file.nameResolved ? 'ready' : 'raw-hash') : 'external-reference';
+      file.availability = file.extractable ? (file.nameResolved ? 'ready' : 'raw-hash') : (file.externalPayload ? 'external-payload' : 'external-reference');
     }
     return {
       archivePath: resolved, archiveName: path.basename(resolved), archiveSize, magic, key: keyResult.key,
       keyRecovered: keyResult.recovered, payloadStart: w[20], header: w, files: fileTable.files,
       folders: folderTable.folders, fileHashes, folderHashes,
-      warnings: [fileTable.trailingBytes ? `${fileTable.trailingBytes} unused file-table bytes were preserved.` : '', folderTable.trailingBytes ? `${folderTable.trailingBytes} unused folder-table bytes were preserved.` : ''].filter(Boolean)
+      warnings: [fileTable.trailingBytes ? `${fileTable.trailingBytes} unused file-table bytes were preserved.` : '', folderTable.trailingBytes ? `${folderTable.trailingBytes} unused folder-table bytes were preserved.` : '', fileTable.files.some((file) => file.externalPayload) ? 'This archive lists payloads outside its local byte range; they were retained as external payload records and cannot be extracted from this CAK alone.' : ''].filter(Boolean)
     };
   } finally { fs.closeSync(fd); }
 }
@@ -396,7 +401,8 @@ function publicSummary(session) {
   const readyFiles = session.files.filter((file) => file.nameResolved && file.extractable).length;
   const rawHashPayloads = session.files.filter((file) => !file.nameResolved && file.extractable).length;
   const externalReferences = session.files.filter((file) => !file.extractable).length;
-  return { archiveName: session.archiveName, archivePath: session.archivePath, archiveSize: session.archiveSize, fileCount: payloadFiles.length, catalogEntryCount: session.files.length, folderCount: session.folders.length, totalExpanded, resolvedNames, unresolvedNames: payloadFiles.length - resolvedNames, resolvedFolders, readyFiles, rawHashPayloads, externalReferences, keyRecovered: session.keyRecovered, warnings: session.warnings };
+  const externalPayloads = session.files.filter((file) => file.externalPayload).length;
+  return { archiveName: session.archiveName, archivePath: session.archivePath, archiveSize: session.archiveSize, fileCount: payloadFiles.length, catalogEntryCount: session.files.length, folderCount: session.folders.length, totalExpanded, resolvedNames, unresolvedNames: payloadFiles.length - resolvedNames, resolvedFolders, readyFiles, rawHashPayloads, externalReferences, externalPayloads, keyRecovered: session.keyRecovered, warnings: session.warnings };
 }
 
 function searchFiles(session, options = {}) {
