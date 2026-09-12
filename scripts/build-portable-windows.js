@@ -9,7 +9,10 @@ const staging = path.join(root, 'build', 'standalone-cak');
 const dist = path.join(root, 'dist');
 const releases = path.join(root, 'portable-release');
 const product = 'Aurora CAK Foundry';
-const publicVersion = '1.7.9';
+const publicVersion = '1.7.9.a';
+// Electron/Windows require a numeric dotted runtime version; keep the
+// user-facing release suffix separately so hotfixes can follow x.y.z.a.
+const runtimeVersion = '1.7.9';
 const artifactName = `Aurora-CAK-Foundry-v${publicVersion}-Windows-x64.zip`;
 const packager = path.join(root, '..', 'AuroraForge_WWE_PC-Game_Modding_Tool', 'node_modules', '.bin', 'electron-packager.cmd');
 
@@ -54,19 +57,19 @@ if (stagedHtml.includes('class="app-sidebar"') || /href="(?:index|project-manage
 fs.writeFileSync(stagedHtmlPath, stagedHtml, 'utf8');
 
 const packageJson = {
-  name: 'aurora-cak-foundry', version: publicVersion, productName: product,
+  name: 'aurora-cak-foundry', version: runtimeVersion, productName: product,
   description: 'Standalone WWE 2K25 and WWE 2K26 CAK extractor, rebuilder, baker, and validator.',
   main: 'electron/standalone-cak-main.js', author: 'VikingStudios', license: 'MIT', private: false,
-  auroraRelease: { project: 'cak', product, publicVersion, runtimeVersion: publicVersion, channel: 'Ready', artifact: artifactName },
+  auroraRelease: { project: 'cak', product, publicVersion, runtimeVersion, channel: 'Ready', artifact: artifactName },
   dependencies: { electron: '43.2.0' }
 };
 fs.writeFileSync(path.join(staging, 'package.json'), JSON.stringify(packageJson, null, 2) + '\n');
 
 const notice = '**Readability note:** I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.';
-fs.writeFileSync(path.join(staging, 'RELEASE_IDENTITY.txt'), `${notice}\n\nProduct: ${product}\nPublic version: ${publicVersion}\nRuntime version: ${publicVersion}\nChannel: Ready\nArtifact: ${artifactName}\n`);
+fs.writeFileSync(path.join(staging, 'RELEASE_IDENTITY.txt'), `${notice}\n\nProduct: ${product}\nPublic version: ${publicVersion}\nRuntime version: ${runtimeVersion}\nChannel: Ready\nArtifact: ${artifactName}\n`);
 fs.writeFileSync(path.join(staging, 'README.txt'), `${notice}\n\n${product} v${publicVersion}\n\nExtract this ZIP, keep its contents together, and run Aurora CAK Foundry.exe. No WWE game archives or Oodle DLL are included.\n`);
 copyFile(path.join(root, 'LICENSE'), path.join(staging, 'AURORA-FORGE-LICENSE.txt'));
-for (const name of ['FAQ.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.9.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md', 'AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md', 'AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md', 'INSTALLATION_AND_ROLLBACK.md']) {
+for (const name of ['FAQ.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.9.a.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.9.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md', 'AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md', 'AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md', 'INSTALLATION_AND_ROLLBACK.md']) {
   copyFile(path.join(root, 'docs', name), path.join(staging, name));
 }
 copyFile(path.join(root, 'third_party', 'Nenkai-Bakery', 'LICENSE.txt'), path.join(staging, 'THIRD-PARTY-NOTICES', 'Nenkai-Bakery-MIT-LICENSE.txt'));
@@ -74,13 +77,13 @@ copyFile(path.join(root, 'third_party', 'Nenkai-Bakery', 'LICENSES', 'Crunch2', 
 copyFile(path.join(root, 'third_party', 'Nenkai-Bakery', 'AURORA-INTEGRATION-NOTICE.md'), path.join(staging, 'THIRD-PARTY-NOTICES', 'Nenkai-Bakery-Aurora-Integration-Notice.md'));
 
 fs.mkdirSync(dist, { recursive: true });
-const result = cp.spawnSync(process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe', ['/d', '/c', 'call', packager, staging, product, '--platform=win32', '--arch=x64', '--electron-version=43.2.0', '--out', dist, '--overwrite', '--asar.unpackDir=app/tools', '--icon=app/assets/img/app-icon.ico', `--app-version=${publicVersion}`, `--build-version=${publicVersion}`], { cwd: root, stdio: 'inherit', windowsHide: true });
+const result = cp.spawnSync(process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe', ['/d', '/c', 'call', packager, staging, product, '--platform=win32', '--arch=x64', '--electron-version=43.2.0', '--out', dist, '--overwrite', '--asar.unpackDir=app/tools', '--icon=app/assets/img/app-icon.ico', `--app-version=${runtimeVersion}`, `--build-version=${runtimeVersion}`], { cwd: root, stdio: 'inherit', windowsHide: true });
 if (result.error) throw result.error;
 if (result.status !== 0) throw new Error(`Electron Packager failed with exit code ${result.status}.`);
 
 const packaged = path.join(dist, `${product}-win32-x64`);
 copyDirectory(path.join(root, 'app', 'data', 'loader-releases'), path.join(packaged, 'resources', 'loader-releases'));
-for (const name of ['README.txt', 'RELEASE_IDENTITY.txt', 'AURORA-FORGE-LICENSE.txt', 'FAQ.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.9.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md', 'AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md', 'AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md', 'INSTALLATION_AND_ROLLBACK.md']) copyFile(path.join(staging, name), path.join(packaged, name));
+for (const name of ['README.txt', 'RELEASE_IDENTITY.txt', 'AURORA-FORGE-LICENSE.txt', 'FAQ.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.9.a.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.9.md', 'CAK_FOUNDRY_RELEASE_NOTES_1.7.8.md', 'AURORA_CAK_FOUNDRY_v1.7.8_BUG_REPORT.md', 'AURORA_CAK_FOUNDRY_v1.7.8_FIX_REPORT.md', 'INSTALLATION_AND_ROLLBACK.md']) copyFile(path.join(staging, name), path.join(packaged, name));
 copyDirectory(path.join(staging, 'THIRD-PARTY-NOTICES'), path.join(packaged, 'THIRD-PARTY-NOTICES'));
 fs.mkdirSync(releases, { recursive: true });
 const destination = path.join(releases, artifactName);
